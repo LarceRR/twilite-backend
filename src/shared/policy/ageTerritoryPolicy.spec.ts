@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-
-import { ErrorCode } from '@/shared/errors/AppError';
 import { DomainError } from '@/shared/errors';
+import { ErrorCode } from '@/shared/errors/AppError';
 
 import {
   AGE_TERRITORY_POLICY,

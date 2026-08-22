@@ -1,6 +1,5 @@
-import { ValidationError } from '@/shared/errors';
-
 import type { LimitUnit } from '@/config/limits';
+import { ValidationError } from '@/shared/errors';
 
 /**
  * Отклонение по лимиту (issue #38).

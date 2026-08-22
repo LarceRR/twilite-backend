@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { LIMIT_DEFINITIONS, type AppLimits, loadLimits } from './limits';
+import { type AppLimits, LIMIT_DEFINITIONS, loadLimits } from './limits';
 
 /** Ключи читаются только из первой колонки матрицы, а не из текста документа. */
 const MATRIX_ROW = /^\|\s*`(LIMIT_[A-Z0-9_]+)`\s*\|/gm;

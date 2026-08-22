@@ -11,9 +11,9 @@ import {
 } from '@/modules/surfaces/domain/repositories/SurfaceRepository';
 import { spawnNearExisting } from '@/modules/surfaces/domain/services/spawnNearExisting';
 import type { UserId } from '@/modules/users/domain/value-objects/UserId';
-import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 import { ConflictError } from '@/shared/errors';
 import { domainEventNames, type SurfaceObjectCreatedEvent } from '@/shared/events/domainEvents';
+import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 import { RANDOM_SOURCE, type RandomSource } from '@/shared/utils/random';
 
 import type { SurfaceObject, SurfaceObjectMetadata } from '../../domain/entities/SurfaceObject';

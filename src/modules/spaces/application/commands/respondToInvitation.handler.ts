@@ -6,9 +6,9 @@ import {
   type UserRepository,
 } from '@/modules/users/domain/repositories/UserRepository';
 import type { UserId } from '@/modules/users/domain/value-objects/UserId';
-import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 import { AuthorizationError, NotFoundError } from '@/shared/errors';
 import { domainEventNames, type SpaceMemberJoinedEvent } from '@/shared/events/domainEvents';
+import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 
 import type { Invitation, InvitationId } from '../../domain/entities/Invitation';
 import { SPACE_REPOSITORY, type SpaceRepository } from '../../domain/repositories/SpaceRepository';

@@ -5,11 +5,11 @@ import {
   USER_REPOSITORY,
   type UserRepository,
 } from '@/modules/users/domain/repositories/UserRepository';
-import { toEmail, type Email } from '@/modules/users/domain/value-objects/Email';
+import { type Email, toEmail } from '@/modules/users/domain/value-objects/Email';
 import type { UserId } from '@/modules/users/domain/value-objects/UserId';
-import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 import { DomainError } from '@/shared/errors';
 import { domainEventNames, type InvitationCreatedEvent } from '@/shared/events/domainEvents';
+import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 
 import type { Invitation } from '../../domain/entities/Invitation';
 import { findMember } from '../../domain/entities/Space';

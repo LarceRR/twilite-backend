@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-
-import { BillingModule } from '@/modules/billing/billing.module';
 import { DrizzleModule } from '@/database/drizzle/drizzle.module';
+import { BillingModule } from '@/modules/billing/billing.module';
 import { SurfacesModule } from '@/modules/surfaces/surfaces.module';
 import { UsersModule } from '@/modules/users/users.module';
 import { IdempotencyService } from '@/shared/idempotency/idempotency.service';

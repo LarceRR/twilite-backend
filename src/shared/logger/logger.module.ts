@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { LoggerModule as PinoModule } from 'nestjs-pino';
 import { ConfigModule } from '@/config/config.module';
 import { APP_CONFIG, type AppConfig } from '@/config/env';
+
 const REDACTED = [
   'req.headers.authorization',
   'req.headers.cookie',

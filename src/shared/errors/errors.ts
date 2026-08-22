@@ -1,4 +1,4 @@
-import { AppError, ErrorCode, type AppErrorKind, type ErrorContext } from './AppError';
+import { AppError, type AppErrorKind, ErrorCode, type ErrorContext } from './AppError';
 
 export type FieldViolation = { readonly path: string; readonly message: string };
 

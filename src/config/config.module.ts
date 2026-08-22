@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 
 import { APP_CONFIG, type AppConfig, loadConfig } from './env';
-import { LIMITS, type AppLimits, loadLimits } from './limits';
+import { type AppLimits, LIMITS, loadLimits } from './limits';
 
 /**
  * Config is resolved once and shared. Modules inject `APP_CONFIG` rather than

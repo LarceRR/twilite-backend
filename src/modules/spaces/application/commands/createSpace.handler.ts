@@ -7,8 +7,8 @@ import {
   type SurfaceRepository,
 } from '@/modules/surfaces/domain/repositories/SurfaceRepository';
 import type { UserId } from '@/modules/users/domain/value-objects/UserId';
-import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 import { domainEventNames, type SpaceCreatedEvent } from '@/shared/events/domainEvents';
+import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 
 import type { Space } from '../../domain/entities/Space';
 import { SPACE_REPOSITORY, type SpaceRepository } from '../../domain/repositories/SpaceRepository';

@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-
-import { ErrorCode } from '@/shared/errors/AppError';
-import { ValidationError } from '@/shared/errors';
-
 import { loadLimits } from '@/config/limits';
+import { ValidationError } from '@/shared/errors';
+import { ErrorCode } from '@/shared/errors/AppError';
 
 import {
   assertJsonWithinLimits,

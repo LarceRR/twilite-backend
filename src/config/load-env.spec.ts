@@ -29,7 +29,9 @@ describe('parseEnvFile', () => {
 
   it('режет комментарий в конце строки, но не # внутри значения', () => {
     const parsed = parseEnvFile(
-      ['PORT=3000 # порт API', 'DATABASE_URL=postgres://twilite:pa#ss@localhost:5432/twilite'].join('\n'),
+      ['PORT=3000 # порт API', 'DATABASE_URL=postgres://twilite:pa#ss@localhost:5432/twilite'].join(
+        '\n',
+      ),
     );
 
     expect(parsed.get('PORT')).toBe('3000');
