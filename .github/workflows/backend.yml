@@ -106,7 +106,7 @@ jobs:
         with:
           image-ref: ${{ env.IMAGE }}
           format: table
-          exit-code: '1'
+          exit-code: "1"
           ignore-unfixed: true
           severity: CRITICAL
 
@@ -136,4 +136,4 @@ jobs:
           eval "$(ssh-agent -s)"
           trap 'ssh-agent -k >/dev/null 2>&1 || true' EXIT
           printf '%s\n' "$VPS_DEPLOY_SSH_KEY" | tr -d '\r' | ssh-add -
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes "$VPS_USER@$VPS_HOST" "sudo -n /opt/twilite/deploy/deploy.sh '$IMAGE'"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" "sudo -n /opt/twilite/deploy/deploy.sh '$IMAGE'"
