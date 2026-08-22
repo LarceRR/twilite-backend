@@ -1,0 +1,10 @@
+/** Time is injected so domain rules and schedulers stay deterministic under test. */
+export interface Clock {
+  now(): Date;
+}
+
+export const CLOCK = Symbol('CLOCK');
+
+export const systemClock: Clock = {
+  now: () => new Date(),
+};
