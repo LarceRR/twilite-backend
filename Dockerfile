@@ -1,5 +1,6 @@
 # Build stage: full toolchain, then ship only what runtime needs.
 FROM node:22-alpine AS builder
+RUN npm install -g npm@10.9.9
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -10,6 +11,7 @@ COPY src ./src
 RUN npm run build && npm prune --omit=dev
 
 FROM node:22-alpine AS runtime
+RUN npm install -g npm@10.9.9
 WORKDIR /app
 ENV NODE_ENV=production
 
