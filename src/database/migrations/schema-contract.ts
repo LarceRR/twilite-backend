@@ -129,7 +129,7 @@ export const EXPECTED_FOREIGN_KEYS: readonly ForeignKeyContract[] = [
   { name: 'pixel_objects_author_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'pixel_objects_reviewed_by_user_id_users_id_fk', onDelete: 'set null' },
   { name: 'pixel_objects_sheet_media_id_media_assets_id_fk', onDelete: 'restrict' },
-  { name: 'pixel_objects_published_revision_id_pixel_object_revisions_id_fk', onDelete: 'set null' },
+  { name: 'pixel_objects_published_revision_fk', onDelete: 'set null' },
   { name: 'pixel_objects_pending_revision_id_pixel_object_revisions_id_fk', onDelete: 'set null' },
   { name: 'pixel_object_revisions_pixel_object_id_pixel_objects_id_fk', onDelete: 'cascade' },
   { name: 'pixel_object_revisions_sheet_media_id_media_assets_id_fk', onDelete: 'restrict' },

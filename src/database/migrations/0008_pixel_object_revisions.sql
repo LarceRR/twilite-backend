@@ -79,5 +79,5 @@ SET "pending_revision_id" = r."id"
 FROM "pixel_object_revisions" AS r
 WHERE r."pixel_object_id" = po."id"
 	AND po."status" IN ('pending', 'rejected');--> statement-breakpoint
-ALTER TABLE "pixel_objects" ADD CONSTRAINT "pixel_objects_published_revision_id_pixel_object_revisions_id_fk" FOREIGN KEY ("published_revision_id") REFERENCES "public"."pixel_object_revisions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "pixel_objects" ADD CONSTRAINT "pixel_objects_published_revision_fk" FOREIGN KEY ("published_revision_id") REFERENCES "public"."pixel_object_revisions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pixel_objects" ADD CONSTRAINT "pixel_objects_pending_revision_id_pixel_object_revisions_id_fk" FOREIGN KEY ("pending_revision_id") REFERENCES "public"."pixel_object_revisions"("id") ON DELETE set null ON UPDATE no action;
