@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { PixelObjectLimits } from '@twilite/contracts';
-import { and, eq, isNotNull } from 'drizzle-orm';
+import { and, eq, isNotNull, or, type SQL } from 'drizzle-orm';
 import { Logger } from 'nestjs-pino';
 
 import { type AppLimits, LIMITS } from '@/config/limits';
@@ -35,9 +35,12 @@ import {
 } from './catalogCursor';
 import { createPreviewMedia } from './createPreviewMedia';
 import {
+  authorCursorWhere,
+  publishedCursorWhere,
   selectAuthorJoined,
   selectPublishedJoined,
   toPixelObjectDto,
+  type JoinedPixelObject,
   type PixelObjectRow,
 } from './pixelObjectQueries';
 import { revisionContentHash } from './revisionBackfill';
@@ -62,20 +65,15 @@ export class PixelObjectsService {
   async listPublished(
     query: CatalogListQuery = { limit: 20 },
   ): Promise<{ items: PixelObjectDto[]; nextCursor: string | null }> {
-    const limit = query.limit;
-    const rows = await selectPublishedJoined(this.db, undefined, limit + 1);
-    const mapped = this.mapRowsQuarantine(rows);
-    const page = mapped.slice(0, limit);
-    const last = page[page.length - 1];
-    const nextCursor =
-      mapped.length > limit && last !== undefined
-        ? encodeCatalogCursor({
-            publishedAt: last.updatedAt,
-            id: last.id,
-          })
-        : null;
-    void decodeCatalogCursor;
-    return { items: page, nextCursor };
+    const cursor = query.cursor ? decodeCatalogCursor(query.cursor) : null;
+    if (query.cursor && cursor === null) {
+      throw new ValidationError('Некорректный cursor', [
+        { path: 'cursor', message: 'Ожидается opaque catalog cursor' },
+      ]);
+    }
+    const where = cursor === null ? undefined : publishedCursorWhere(cursor);
+    const rows = await selectPublishedJoined(this.db, where, query.limit + 1);
+    return this.toPage(rows, query.limit);
   }
 
   async getPublished(id: string): Promise<PixelObjectDto> {
@@ -98,22 +96,61 @@ export class PixelObjectsService {
     });
   }
 
-  async listMine(authorUserId: string): Promise<PixelObjectDto[]> {
-    const rows = await selectAuthorJoined(this.db, eq(pixelObjects.authorUserId, authorUserId));
-    return this.mapRowsQuarantine(rows);
+  async listMine(
+    authorUserId: string,
+    query: CatalogListQuery = { limit: 20 },
+  ): Promise<{ items: PixelObjectDto[]; nextCursor: string | null }> {
+    return this.listAuthorPage(eq(pixelObjects.authorUserId, authorUserId), query);
   }
 
-  async listPending(): Promise<PixelObjectDto[]> {
-    const rows = await selectAuthorJoined(
-      this.db,
-      and(isNotNull(pixelObjects.pendingRevisionId), eq(pixelObjects.status, 'pending')),
+  async listPending(
+    query: CatalogListQuery = { limit: 20 },
+  ): Promise<{ items: PixelObjectDto[]; nextCursor: string | null }> {
+    return this.listAuthorPage(
+      or(
+        eq(pixelObjects.status, 'pending'),
+        and(eq(pixelObjects.status, 'published'), isNotNull(pixelObjects.pendingRevisionId)),
+      )!,
+      query,
     );
-    // Also include published heads that have a pending resubmit
-    const resubmits = await selectAuthorJoined(
-      this.db,
-      and(isNotNull(pixelObjects.pendingRevisionId), eq(pixelObjects.status, 'published')),
-    );
-    return this.mapRowsQuarantine([...rows, ...resubmits]);
+  }
+
+  private async listAuthorPage(
+    filter: SQL,
+    query: CatalogListQuery,
+  ): Promise<{ items: PixelObjectDto[]; nextCursor: string | null }> {
+    const cursor = query.cursor ? decodeCatalogCursor(query.cursor) : null;
+    if (query.cursor && cursor === null) {
+      throw new ValidationError('Некорректный cursor', [
+        { path: 'cursor', message: 'Ожидается opaque catalog cursor' },
+      ]);
+    }
+    const where = cursor === null ? filter : and(filter, authorCursorWhere(cursor));
+    const rows = await selectAuthorJoined(this.db, where, query.limit + 1);
+    return this.toPage(rows, query.limit);
+  }
+
+  private toPage(
+    rows: JoinedPixelObject[],
+    limit: number,
+  ): { items: PixelObjectDto[]; nextCursor: string | null } {
+    const mapped = this.mapRowsQuarantine(rows);
+    const page = mapped.slice(0, limit);
+    const lastRow = rows[Math.min(page.length, rows.length) - 1];
+    // Align cursor with last *returned* DTO id when quarantine drops rows.
+    const lastDto = page[page.length - 1];
+    const cursorRow =
+      lastDto === undefined
+        ? undefined
+        : rows.find((row) => row.object.id === lastDto.id) ?? lastRow;
+    const nextCursor =
+      mapped.length > limit && cursorRow?.sortAt != null
+        ? encodeCatalogCursor({
+            publishedAt: cursorRow.sortAt.toISOString(),
+            id: cursorRow.object.id,
+          })
+        : null;
+    return { items: page, nextCursor };
   }
 
   async submit(

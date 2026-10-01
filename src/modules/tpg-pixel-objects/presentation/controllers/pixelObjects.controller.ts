@@ -57,18 +57,19 @@ export class PixelObjectsController {
   @RequireAnyRbac('tpg.pixelObjects.submit', 'tpg.pixelObjects.create')
   @ApiOperation({ summary: 'Отправки текущего автора' })
   @ApiOkResponse({ type: PixelObjectListDtoClass })
-  async mine(@CurrentUser() user: AuthenticatedUser) {
-    const items = await this.objects.listMine(user.userId);
-    return { items };
+  async mine(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: CatalogListQueryDtoClass,
+  ) {
+    return this.objects.listMine(user.userId, catalogListQuerySchema.parse(query));
   }
 
   @Get('moderation')
   @RequireRbac('tpg.pixelObjects.moderate')
   @ApiOperation({ summary: 'Очередь модерации пиксельных объектов' })
   @ApiOkResponse({ type: PixelObjectListDtoClass })
-  async moderation() {
-    const items = await this.objects.listPending();
-    return { items };
+  async moderation(@Query() query: CatalogListQueryDtoClass) {
+    return this.objects.listPending(catalogListQuerySchema.parse(query));
   }
 
   @Get(':id/mobile')

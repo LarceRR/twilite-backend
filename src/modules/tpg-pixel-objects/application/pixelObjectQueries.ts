@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, ne, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, lt, ne, or, sql, type SQL } from 'drizzle-orm';
 
 import type { Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets, pixelObjectRevisions, pixelObjects, users } from '@/database/schema';
@@ -10,8 +10,9 @@ import { pixelObjectManifestSchema } from '@/shared/contracts/pixelObjects.contr
 import { InfrastructureError, ValidationError } from '@/shared/errors';
 import type { StoragePort } from '@/infrastructure/storage/StoragePort';
 
+import type { CatalogCursor } from './catalogCursor';
+
 export type PixelObjectRow = typeof pixelObjects.$inferSelect;
-export type PixelObjectRevisionRow = typeof pixelObjectRevisions.$inferSelect;
 
 export type JoinedPixelObject = {
   readonly object: PixelObjectRow;
@@ -22,6 +23,8 @@ export type JoinedPixelObject = {
   readonly rejectionComment: string | null;
   readonly reviewedAt: Date | null;
   readonly status: PixelObjectRow['status'];
+  /** Sort key for cursor pagination (publishedAt or updatedAt). */
+  readonly sortAt: Date | null;
 };
 
 export function parseManifestSafely(
@@ -73,6 +76,23 @@ export function toPixelObjectDto(
   };
 }
 
+export function publishedCursorWhere(cursor: CatalogCursor): SQL {
+  const published = pixelObjectRevisions;
+  const at = new Date(cursor.publishedAt);
+  return or(
+    lt(published.publishedAt, at),
+    and(eq(published.publishedAt, at), lt(pixelObjects.id, cursor.id)),
+  )!;
+}
+
+export function authorCursorWhere(cursor: CatalogCursor): SQL {
+  const at = new Date(cursor.publishedAt);
+  return or(
+    lt(pixelObjects.updatedAt, at),
+    and(eq(pixelObjects.updatedAt, at), lt(pixelObjects.id, cursor.id)),
+  )!;
+}
+
 /** Catalog / mobile: resolve via published revision pointer. */
 export async function selectPublishedJoined(
   db: Database,
@@ -80,6 +100,11 @@ export async function selectPublishedJoined(
   limit?: number,
 ): Promise<JoinedPixelObject[]> {
   const published = pixelObjectRevisions;
+  const clauses = [
+    isNotNull(pixelObjects.publishedRevisionId),
+    ne(pixelObjects.status, 'archived'),
+    ...(where === undefined ? [] : [where]),
+  ];
   const query = db
     .select({
       object: pixelObjects,
@@ -90,20 +115,13 @@ export async function selectPublishedJoined(
       rejectionComment: published.rejectionComment,
       reviewedAt: published.reviewedAt,
       status: published.status,
+      sortAt: published.publishedAt,
     })
     .from(pixelObjects)
     .innerJoin(users, eq(users.id, pixelObjects.authorUserId))
     .innerJoin(published, eq(published.id, pixelObjects.publishedRevisionId))
     .innerJoin(mediaAssets, eq(mediaAssets.id, published.sheetMediaId))
-    .where(
-      where === undefined
-        ? and(isNotNull(pixelObjects.publishedRevisionId), ne(pixelObjects.status, 'archived'))
-        : and(
-            isNotNull(pixelObjects.publishedRevisionId),
-            ne(pixelObjects.status, 'archived'),
-            where,
-          ),
-    )
+    .where(and(...clauses))
     .orderBy(desc(published.publishedAt), desc(pixelObjects.id));
 
   return limit === undefined ? query : query.limit(limit);
@@ -126,6 +144,7 @@ export async function selectAuthorJoined(
       rejectionComment: sql<string | null>`coalesce(${rev.rejectionComment}, ${pixelObjects.rejectionComment})`,
       reviewedAt: sql<Date | null>`coalesce(${rev.reviewedAt}, ${pixelObjects.reviewedAt})`,
       status: sql<PixelObjectRow['status']>`coalesce(${rev.status}, ${pixelObjects.status})`,
+      sortAt: pixelObjects.updatedAt,
     })
     .from(pixelObjects)
     .innerJoin(users, eq(users.id, pixelObjects.authorUserId))
@@ -141,7 +160,7 @@ export async function selectAuthorJoined(
       eq(mediaAssets.id, sql`coalesce(${rev.sheetMediaId}, ${pixelObjects.sheetMediaId})`),
     )
     .where(where)
-    .orderBy(desc(pixelObjects.updatedAt));
+    .orderBy(desc(pixelObjects.updatedAt), desc(pixelObjects.id));
 
   return limit === undefined ? query : query.limit(limit);
 }

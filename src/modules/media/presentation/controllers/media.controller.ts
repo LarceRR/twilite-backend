@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { Body, Controller, Inject, Param, Post } from '@nestjs/common';
+import { Body, Controller, Headers, Inject, Param, Post } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 
@@ -19,6 +19,7 @@ import {
 } from '@/shared/contracts/media.contract';
 import { type AuthenticatedUser, CurrentUser } from '@/shared/decorators/auth.decorators';
 import { InfrastructureError, ValidationError } from '@/shared/errors';
+import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 
 import { ConfirmMediaUploadService } from '../../application/confirmMediaUpload.service';
 
@@ -34,6 +35,7 @@ export class MediaController {
     @Inject(STORAGE) private readonly storage: StoragePort,
     private readonly entitlements: EntitlementsService,
     private readonly confirmUpload: ConfirmMediaUploadService,
+    private readonly idempotency: IdempotencyService,
   ) {}
 
   /**
@@ -45,10 +47,39 @@ export class MediaController {
   @ApiOkResponse({ type: UploadTicketResponseDto })
   async createUpload(
     @CurrentUser() user: AuthenticatedUser,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Body() body: CreateUploadDto,
   ): Promise<UploadTicketDto> {
+    return this.idempotency.execute({
+      key: idempotencyKey,
+      scope: `media:upload:${user.userId}`,
+      payload: body,
+      operation: () => this.createUploadOnce(user.userId, body),
+    });
+  }
+
+  @Post('uploads/:assetId/confirm')
+  @ApiOperation({ summary: 'Подтвердить успешную загрузку' })
+  @ApiOkResponse({ type: MediaAssetResponseDto })
+  async confirm(
+    @CurrentUser() user: AuthenticatedUser,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Param('assetId') assetId: string,
+  ): Promise<MediaAssetDto> {
+    return this.idempotency.execute({
+      key: idempotencyKey,
+      scope: `media:confirm:${user.userId}:${assetId}`,
+      payload: { assetId },
+      operation: () => this.confirmUpload.confirm(user.userId, assetId),
+    });
+  }
+
+  private async createUploadOnce(
+    userId: string,
+    body: CreateUploadDto,
+  ): Promise<UploadTicketDto> {
     if (body.kind === 'voice') {
-      await this.entitlements.assertGranted(user.userId, 'canUploadVoice');
+      await this.entitlements.assertGranted(userId, 'canUploadVoice');
     }
 
     if (body.kind === 'pixel-sheet' && body.contentType !== 'image/png') {
@@ -61,12 +92,12 @@ export class MediaController {
       throw new InfrastructureError('Загрузка файлов недоступна: хранилище не настроено');
     }
 
-    const storageKey = `${user.userId}/${body.kind}/${randomUUID()}`;
+    const storageKey = `${userId}/${body.kind}/${randomUUID()}`;
 
     const [asset] = await this.db
       .insert(mediaAssets)
       .values({
-        ownerId: user.userId,
+        ownerId: userId,
         spaceId: body.spaceId ?? null,
         kind: body.kind,
         storageKey,
@@ -96,15 +127,5 @@ export class MediaController {
         'Cache-Control': IMMUTABLE_OBJECT_CACHE_CONTROL,
       },
     };
-  }
-
-  @Post('uploads/:assetId/confirm')
-  @ApiOperation({ summary: 'Подтвердить успешную загрузку' })
-  @ApiOkResponse({ type: MediaAssetResponseDto })
-  async confirm(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('assetId') assetId: string,
-  ): Promise<MediaAssetDto> {
-    return this.confirmUpload.confirm(user.userId, assetId);
   }
 }
