@@ -53,11 +53,7 @@ export class DrizzleRbacRepository implements RbacRepository {
   }
 
   async findDefaultGroup(): Promise<RbacGroup | null> {
-    const [row] = await this.db
-      .select()
-      .from(groups)
-      .where(eq(groups.isDefault, true))
-      .limit(1);
+    const [row] = await this.db.select().from(groups).where(eq(groups.isDefault, true)).limit(1);
     return row === undefined ? null : toGroup(row);
   }
 

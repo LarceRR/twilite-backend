@@ -68,10 +68,7 @@ export class PixelObjectsController {
   @RequireAnyRbac('tpg.pixelObjects.submit', 'tpg.pixelObjects.create')
   @ApiOperation({ summary: 'Отправки текущего автора' })
   @ApiOkResponse({ type: PixelObjectListDtoClass })
-  async mine(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query() query: CatalogListQueryDtoClass,
-  ) {
+  async mine(@CurrentUser() user: AuthenticatedUser, @Query() query: CatalogListQueryDtoClass) {
     return this.objects.listMine(user.userId, catalogListQuerySchema.parse(query));
   }
 
@@ -127,17 +124,10 @@ export class PixelObjectsController {
   }
 
   @Post(':id/archive')
-  @RequireAnyRbac(
-    'tpg.pixelObjects.submit',
-    'tpg.pixelObjects.create',
-    'tpg.pixelObjects.moderate',
-  )
+  @RequireAnyRbac('tpg.pixelObjects.submit', 'tpg.pixelObjects.create', 'tpg.pixelObjects.moderate')
   @ApiOperation({ summary: 'Архивировать объект (каталог скрывает, размещения остаются)' })
   @ApiOkResponse({ type: PixelObjectDtoClass })
-  async archive(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async archive(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.objects.archive(user.userId, id);
   }
 
@@ -146,10 +136,7 @@ export class PixelObjectsController {
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOperation({ summary: 'Опубликовать пиксельный объект' })
   @ApiOkResponse({ type: PixelObjectDtoClass })
-  async publish(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async publish(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.objects.publish(user.userId, id);
   }
 
@@ -168,7 +155,9 @@ export class PixelObjectsController {
 
   @Post('admin/media-gc')
   @RequireRbac('tpg.pixelObjects.moderate')
-  @ApiOperation({ summary: 'GC неподтверждённых uploads и orphan pixel-sheets (dry-run по умолчанию)' })
+  @ApiOperation({
+    summary: 'GC неподтверждённых uploads и orphan pixel-sheets (dry-run по умолчанию)',
+  })
   async runMediaGc(@Query('dryRun') dryRun = 'true') {
     return this.mediaGc.run({ dryRun: dryRun !== 'false' });
   }

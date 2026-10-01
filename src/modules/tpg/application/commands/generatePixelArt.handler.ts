@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { LIMITS, type AppLimits } from '@/config/limits';
+import { type AppLimits, LIMITS } from '@/config/limits';
 import type { PixelateResponseDto } from '@/shared/contracts/tpg.contract';
 import { ValidationError } from '@/shared/errors';
 

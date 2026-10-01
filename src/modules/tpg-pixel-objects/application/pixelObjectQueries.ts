@@ -1,14 +1,11 @@
-import { and, desc, eq, isNotNull, lt, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, lt, ne, or, type SQL, sql } from 'drizzle-orm';
 
 import type { Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets, pixelObjectRevisions, pixelObjects, users } from '@/database/schema';
-import type {
-  PixelObjectDto,
-  PixelObjectManifest,
-} from '@/shared/contracts/pixelObjects.contract';
+import type { StoragePort } from '@/infrastructure/storage/StoragePort';
+import type { PixelObjectDto, PixelObjectManifest } from '@/shared/contracts/pixelObjects.contract';
 import { pixelObjectManifestSchema } from '@/shared/contracts/pixelObjects.contract';
 import { InfrastructureError, ValidationError } from '@/shared/errors';
-import type { StoragePort } from '@/infrastructure/storage/StoragePort';
 
 import type { CatalogCursor } from './catalogCursor';
 
@@ -27,10 +24,7 @@ export type JoinedPixelObject = {
   readonly sortAt: Date | null;
 };
 
-export function parseManifestSafely(
-  raw: unknown,
-  objectId: string,
-): PixelObjectManifest | null {
+export function parseManifestSafely(raw: unknown, objectId: string): PixelObjectManifest | null {
   const parsed = pixelObjectManifestSchema.safeParse(raw);
   if (!parsed.success) {
     return null;
@@ -79,18 +73,26 @@ export function toPixelObjectDto(
 export function publishedCursorWhere(cursor: CatalogCursor): SQL {
   const published = pixelObjectRevisions;
   const at = new Date(cursor.publishedAt);
-  return or(
+  const clause = or(
     lt(published.publishedAt, at),
     and(eq(published.publishedAt, at), lt(pixelObjects.id, cursor.id)),
-  )!;
+  );
+  if (clause === undefined) {
+    throw new Error('publishedCursorWhere: empty SQL expression');
+  }
+  return clause;
 }
 
 export function authorCursorWhere(cursor: CatalogCursor): SQL {
   const at = new Date(cursor.publishedAt);
-  return or(
+  const clause = or(
     lt(pixelObjects.updatedAt, at),
     and(eq(pixelObjects.updatedAt, at), lt(pixelObjects.id, cursor.id)),
-  )!;
+  );
+  if (clause === undefined) {
+    throw new Error('authorCursorWhere: empty SQL expression');
+  }
+  return clause;
 }
 
 /** Catalog / mobile: resolve via published revision pointer. */
@@ -141,7 +143,9 @@ export async function selectAuthorJoined(
       storageKey: mediaAssets.storageKey,
       revisionNumber: sql<number>`coalesce(${rev.revisionNumber}, ${pixelObjects.revision})`,
       manifest: sql<unknown>`coalesce(${rev.manifest}, ${pixelObjects.manifest})`,
-      rejectionComment: sql<string | null>`coalesce(${rev.rejectionComment}, ${pixelObjects.rejectionComment})`,
+      rejectionComment: sql<
+        string | null
+      >`coalesce(${rev.rejectionComment}, ${pixelObjects.rejectionComment})`,
       reviewedAt: sql<Date | null>`coalesce(${rev.reviewedAt}, ${pixelObjects.reviewedAt})`,
       status: sql<PixelObjectRow['status']>`coalesce(${rev.status}, ${pixelObjects.status})`,
       sortAt: pixelObjects.updatedAt,

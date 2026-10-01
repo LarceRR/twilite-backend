@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-
-import { ErrorCode } from '@/shared/errors/AppError';
-import { DomainError } from '@/shared/errors';
-
 import { mediaQuotaExceededError } from '@/modules/media/application/assertMediaUploadPolicy';
-import { assertNotSelfModeration } from '@/modules/tpg-pixel-objects/application/assertNotSelfModeration';
 import { buildOpaqueStorageKey } from '@/modules/media/domain/opaqueStorageKey';
 import { assertHttpImageUrl } from '@/modules/tpg/domain/services/assertHttpImageUrl';
+import { assertNotSelfModeration } from '@/modules/tpg-pixel-objects/application/assertNotSelfModeration';
+import { DomainError } from '@/shared/errors';
+import { ErrorCode } from '@/shared/errors/AppError';
 
 /**
  * P5-S2 security regression matrix (SEC-01..SEC-05 unit surface).
@@ -20,9 +18,9 @@ describe('P5-S2 security regression', () => {
   });
 
   it('SEC self-moderation: author cannot review own object', () => {
-    expect(() =>
-      assertNotSelfModeration({ authorUserId: 'a', reviewerUserId: 'a' }),
-    ).toThrow(DomainError);
+    expect(() => assertNotSelfModeration({ authorUserId: 'a', reviewerUserId: 'a' })).toThrow(
+      DomainError,
+    );
   });
 
   it('SEC opaque keys: storage key does not embed user id path segment', () => {

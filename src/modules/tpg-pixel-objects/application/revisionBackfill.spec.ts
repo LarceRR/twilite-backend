@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  mapHeadStatusToRevisionPointers,
-  revisionContentHash,
-} from './revisionBackfill';
+import { mapHeadStatusToRevisionPointers, revisionContentHash } from './revisionBackfill';
 
 describe('revisionBackfill', () => {
   it('points published heads at published_revision_id only', () => {

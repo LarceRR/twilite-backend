@@ -1,18 +1,12 @@
 import { Body, Controller, Post, Req } from '@nestjs/common';
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
 import { createZodDto } from 'nestjs-zod';
 
 import {
-  type PixelateResponseDto,
   PIXEL_ART_ALGORITHMS,
+  type PixelateResponseDto,
   pixelateFromUrlRequestSchema,
   pixelateResponseSchema,
 } from '@/shared/contracts/tpg.contract';
@@ -107,18 +101,12 @@ async function readUpload(request: FastifyRequest): Promise<UploadParts> {
   };
 }
 
-function readOptionalString(
-  fields: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function readOptionalString(fields: Record<string, unknown>, key: string): string | undefined {
   const raw = (fields[key] as { value?: string } | undefined)?.value;
   return raw === undefined || raw.length === 0 ? undefined : raw;
 }
 
-function readOptionalNumber(
-  fields: Record<string, unknown>,
-  key: string,
-): number | undefined {
+function readOptionalNumber(fields: Record<string, unknown>, key: string): number | undefined {
   const raw = readOptionalString(fields, key);
   if (raw === undefined) return undefined;
   const value = Number(raw);

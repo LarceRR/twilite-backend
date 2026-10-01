@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
+import type { AppConfig } from '@/config/env';
+import type { Cache } from '@/infrastructure/redis/redisCache';
 import type { RbacRepository } from '../../domain/repositories/RbacRepository';
 import { RbacCacheService } from './rbacCache.service';
-import type { Cache } from '@/infrastructure/redis/redisCache';
-import type { AppConfig } from '@/config/env';
 
 describe('RbacCacheService.invalidateByGroup', () => {
   const cache = {

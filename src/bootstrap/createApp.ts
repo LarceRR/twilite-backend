@@ -5,7 +5,7 @@ import { Logger } from 'nestjs-pino';
 
 import { AppModule } from '@/app/app.module';
 import { APP_CONFIG, type AppConfig } from '@/config/env';
-import { LIMITS, type AppLimits } from '@/config/limits';
+import { type AppLimits, LIMITS } from '@/config/limits';
 
 import { setupSwagger } from './swagger';
 
@@ -37,9 +37,7 @@ export async function createApp(): Promise<{
       'Object storage (R2) включён',
     );
   } else {
-    logger.warn(
-      'Object storage выключен — задайте STORAGE_ENDPOINT и STORAGE_BUCKET в .env',
-    );
+    logger.warn('Object storage выключен — задайте STORAGE_ENDPOINT и STORAGE_BUCKET в .env');
   }
   app.setGlobalPrefix('v1', { exclude: ['health'] });
   app.useWebSocketAdapter(new WsAdapter(app));

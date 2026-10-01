@@ -6,8 +6,8 @@ import { CACHE, type Cache } from '@/infrastructure/redis/redisCache';
 import { STORAGE, type StoragePort } from '@/infrastructure/storage/StoragePort';
 import { SpaceAccessService } from '@/modules/spaces/application/services/spaceAccess.service';
 import type { SpaceId } from '@/modules/spaces/domain/value-objects/SpacePermission';
-import { toSurfaceObjectDto } from '@/modules/surface-objects/application/mappers/surfaceObject.mapper';
 import { loadPublishedMobileByIds } from '@/modules/surface-objects/application/loadPublishedMobileByIds';
+import { toSurfaceObjectDto } from '@/modules/surface-objects/application/mappers/surfaceObject.mapper';
 import {
   SURFACE_OBJECT_REPOSITORY,
   type SurfaceObjectRepository,
@@ -57,8 +57,7 @@ export class GetSurfaceSnapshotHandler {
               (typeof object.metadata['pixelObjectId'] === 'string'
                 ? object.metadata['pixelObjectId']
                 : null);
-            const pixelObject =
-              pixelObjectId === null ? null : (embeds.get(pixelObjectId) ?? null);
+            const pixelObject = pixelObjectId === null ? null : (embeds.get(pixelObjectId) ?? null);
             return { ...dto, pixelObjectId, pixelObject };
           }),
         };

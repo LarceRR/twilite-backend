@@ -25,10 +25,7 @@ describe('pixelObjectBinding (P2-S6)', () => {
 
   it('rejects metadata binding changes on PATCH', () => {
     expect(() =>
-      assertMetadataBindingImmutable(
-        { pixelObjectId: 'a' },
-        { pixelObjectId: 'b' },
-      ),
+      assertMetadataBindingImmutable({ pixelObjectId: 'a' }, { pixelObjectId: 'b' }),
     ).toThrow(/pixelObjectId/);
   });
 });

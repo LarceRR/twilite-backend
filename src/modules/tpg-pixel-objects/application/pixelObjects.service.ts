@@ -8,19 +8,14 @@ import { type AppLimits, LIMITS } from '@/config/limits';
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets, pixelObjectRevisions, pixelObjects } from '@/database/schema';
 import { STORAGE, type StoragePort } from '@/infrastructure/storage/StoragePort';
+import { AuditLogService } from '@/shared/audit/auditLog.service';
 import type {
   PixelObjectDto,
   PixelObjectManifest,
   PixelObjectMobileDto,
   SubmitPixelObjectDto,
 } from '@/shared/contracts/pixelObjects.contract';
-import { AuditLogService } from '@/shared/audit/auditLog.service';
-import {
-  AuthorizationError,
-  ConflictError,
-  NotFoundError,
-  ValidationError,
-} from '@/shared/errors';
+import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from '@/shared/errors';
 import {
   domainEventNames,
   type PixelObjectArchivedEvent,
@@ -30,20 +25,16 @@ import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 
 import { assertNotSelfModeration } from './assertNotSelfModeration';
 import { assertPixelObjectSheet } from './assertPixelObjectSheet';
-import {
-  decodeCatalogCursor,
-  encodeCatalogCursor,
-  type CatalogListQuery,
-} from './catalogCursor';
+import { type CatalogListQuery, decodeCatalogCursor, encodeCatalogCursor } from './catalogCursor';
 import { createPreviewMedia } from './createPreviewMedia';
 import {
   authorCursorWhere,
+  type JoinedPixelObject,
+  type PixelObjectRow,
   publishedCursorWhere,
   selectAuthorJoined,
   selectPublishedJoined,
   toPixelObjectDto,
-  type JoinedPixelObject,
-  type PixelObjectRow,
 } from './pixelObjectQueries';
 import { revisionContentHash } from './revisionBackfill';
 import { toPixelObjectLimitsDto } from './toPixelObjectLimitsDto';
@@ -109,13 +100,14 @@ export class PixelObjectsService {
   async listPending(
     query: CatalogListQuery = { limit: 20 },
   ): Promise<{ items: PixelObjectDto[]; nextCursor: string | null }> {
-    return this.listAuthorPage(
-      or(
-        eq(pixelObjects.status, 'pending'),
-        and(eq(pixelObjects.status, 'published'), isNotNull(pixelObjects.pendingRevisionId)),
-      )!,
-      query,
+    const filter = or(
+      eq(pixelObjects.status, 'pending'),
+      and(eq(pixelObjects.status, 'published'), isNotNull(pixelObjects.pendingRevisionId)),
     );
+    if (filter === undefined) {
+      throw new Error('listPending: empty SQL expression');
+    }
+    return this.listAuthorPage(filter, query);
   }
 
   private async listAuthorPage(
@@ -145,7 +137,7 @@ export class PixelObjectsService {
     const cursorRow =
       lastDto === undefined
         ? undefined
-        : rows.find((row) => row.object.id === lastDto.id) ?? lastRow;
+        : (rows.find((row) => row.object.id === lastDto.id) ?? lastRow);
     const nextCursor =
       mapped.length > limit && cursorRow?.sortAt != null
         ? encodeCatalogCursor({
@@ -381,8 +373,9 @@ export class PixelObjectsService {
       resourceId: id,
       context: { revision: revisionNumber, decision: 'reject' },
     });
-    if ((await this.findPublishedDto(id)) !== null) {
-      return (await this.findPublishedDto(id))!;
+    const published = await this.findPublishedDto(id);
+    if (published !== null) {
+      return published;
     }
     return this.requireAuthorDto(id);
   }

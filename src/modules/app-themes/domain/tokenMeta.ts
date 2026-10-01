@@ -32,7 +32,11 @@ export const APP_THEME_TOKEN_META: readonly TokenMetaEntry[] = [
   },
   { key: 'textInverted', group: 'text', descriptionRu: 'Текст на акцентных и тёмных заливках' },
   { key: 'accent', group: 'brand', descriptionRu: 'Главный акцент: CTA, активные элементы' },
-  { key: 'accentSoft', group: 'brand', descriptionRu: 'Мягкий фон акцента (chips, soft highlight)' },
+  {
+    key: 'accentSoft',
+    group: 'brand',
+    descriptionRu: 'Мягкий фон акцента (chips, soft highlight)',
+  },
   { key: 'accentPressed', group: 'brand', descriptionRu: 'Акцент в состоянии нажатия' },
   { key: 'accentOn', group: 'brand', descriptionRu: 'Текст/иконка поверх акцентной заливки' },
   { key: 'secondary', group: 'brand', descriptionRu: 'Вторичный бренд-цвет' },
@@ -69,9 +73,9 @@ export const APP_THEME_TOKEN_META: readonly TokenMetaEntry[] = [
 ];
 
 export function buildThemeAiSystemPrompt(): string {
-  const fields = APP_THEME_TOKEN_META.map(
-    (entry) => `- ${entry.key}: ${entry.descriptionRu}`,
-  ).join('\n');
+  const fields = APP_THEME_TOKEN_META.map((entry) => `- ${entry.key}: ${entry.descriptionRu}`).join(
+    '\n',
+  );
 
   return [
     'You generate a Twilite mobile app theme as a single JSON object.',

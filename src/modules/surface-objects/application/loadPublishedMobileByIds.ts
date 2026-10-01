@@ -1,9 +1,8 @@
 import { eq, inArray } from 'drizzle-orm';
-
-import { toPixelObjectMobileDto } from '@/modules/tpg-pixel-objects/application/toPixelObjectMobileDto';
 import type { Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets, pixelObjectRevisions, pixelObjects } from '@/database/schema';
 import type { StoragePort } from '@/infrastructure/storage/StoragePort';
+import { toPixelObjectMobileDto } from '@/modules/tpg-pixel-objects/application/toPixelObjectMobileDto';
 import type { PixelObjectMobileDto } from '@/shared/contracts/pixelObjects.contract';
 import { pixelObjectManifestSchema } from '@/shared/contracts/pixelObjects.contract';
 

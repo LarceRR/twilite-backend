@@ -6,8 +6,7 @@ import { pixelObjects } from '@/database/schema';
 import { DomainError, ValidationError } from '@/shared/errors';
 import { ErrorCode } from '@/shared/errors/AppError';
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function resolvePixelObjectIdFromCreate(input: {
   readonly pixelObjectId?: string;

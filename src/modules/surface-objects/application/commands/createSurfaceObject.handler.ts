@@ -26,10 +26,7 @@ import {
 import { assertSubjectAllowed, defaultSubjectUserId } from '../../domain/services/subjectPolicy';
 import type { SurfaceObjectKind } from '../../domain/value-objects/SurfaceObjectKind';
 import { toSurfaceObjectDto } from '../mappers/surfaceObject.mapper';
-import {
-  assertPublishedPixelObject,
-  resolvePixelObjectIdFromCreate,
-} from '../pixelObjectBinding';
+import { assertPublishedPixelObject, resolvePixelObjectIdFromCreate } from '../pixelObjectBinding';
 
 export type CreateSurfaceObjectCommand = {
   readonly spaceId: SpaceId;

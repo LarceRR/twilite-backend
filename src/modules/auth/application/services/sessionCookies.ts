@@ -69,7 +69,10 @@ export function readAccessToken(request: FastifyRequest): string | null {
   return readCookie(request, ACCESS_COOKIE);
 }
 
-export function readRefreshToken(request: FastifyRequest, bodyToken: string | undefined): string | null {
+export function readRefreshToken(
+  request: FastifyRequest,
+  bodyToken: string | undefined,
+): string | null {
   if (typeof bodyToken === 'string' && bodyToken.length > 0) {
     return bodyToken;
   }
@@ -77,7 +80,10 @@ export function readRefreshToken(request: FastifyRequest, bodyToken: string | un
   return readCookie(request, REFRESH_COOKIE);
 }
 
-export function serializeSessionCookies(session: AuthSessionDto, options: CookieWriteOptions): readonly string[] {
+export function serializeSessionCookies(
+  session: AuthSessionDto,
+  options: CookieWriteOptions,
+): readonly string[] {
   return [
     serializeCookie(ACCESS_COOKIE, session.accessToken ?? '', {
       path: ACCESS_PATH,
@@ -161,4 +167,3 @@ function headerValue(value: string | string[] | undefined): string | undefined {
 
   return value;
 }
-

@@ -1,17 +1,9 @@
-import {
-  Body,
-  Controller,
-  Headers,
-  Inject,
-  Param,
-  ParseUUIDPipe,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Headers, Inject, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { createZodDto } from 'nestjs-zod';
 
-import { LIMITS, type AppLimits } from '@/config/limits';
+import { type AppLimits, LIMITS } from '@/config/limits';
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets } from '@/database/schema';
 import {
@@ -32,7 +24,10 @@ import { RequireRbac } from '@/shared/decorators/rbac.decorators';
 import { InfrastructureError } from '@/shared/errors';
 import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 
-import { assertMediaUploadPolicy, mediaQuotaExceededError } from '../../application/assertMediaUploadPolicy';
+import {
+  assertMediaUploadPolicy,
+  mediaQuotaExceededError,
+} from '../../application/assertMediaUploadPolicy';
 import { ConfirmMediaUploadService } from '../../application/confirmMediaUpload.service';
 import { countUploadsToday } from '../../application/countUploadsToday';
 import { buildOpaqueStorageKey } from '../../domain/opaqueStorageKey';
@@ -93,10 +88,7 @@ export class MediaController {
     });
   }
 
-  private async createUploadOnce(
-    userId: UserId,
-    body: CreateUploadDto,
-  ): Promise<UploadTicketDto> {
+  private async createUploadOnce(userId: UserId, body: CreateUploadDto): Promise<UploadTicketDto> {
     if (body.kind === 'voice') {
       await this.entitlements.assertGranted(userId, 'canUploadVoice');
     }

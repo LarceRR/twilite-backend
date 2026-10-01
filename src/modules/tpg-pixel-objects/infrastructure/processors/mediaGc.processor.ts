@@ -15,7 +15,9 @@ export class MediaGcProcessor extends WorkerHost {
     super();
   }
 
-  override async process(job: Job): Promise<{ pendingDeleted: number; orphanSheetsDeleted: number }> {
+  override async process(
+    job: Job,
+  ): Promise<{ pendingDeleted: number; orphanSheetsDeleted: number }> {
     if (job.name !== jobNames.gcPendingMedia) {
       this.logger.warn({ jobName: job.name }, 'media_gc_unknown_job');
       return { pendingDeleted: 0, orphanSheetsDeleted: 0 };

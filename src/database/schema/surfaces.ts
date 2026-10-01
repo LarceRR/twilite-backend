@@ -9,10 +9,9 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-
+import { pixelObjects } from './pixelObjects';
 import { spaces } from './spaces';
 import { users } from './users';
-import { pixelObjects } from './pixelObjects';
 
 export const surfaces = pgTable(
   'surfaces',

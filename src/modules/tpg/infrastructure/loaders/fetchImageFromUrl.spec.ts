@@ -6,13 +6,12 @@ import { fetchImageFromUrl } from './fetchImageFromUrl';
 
 describe('fetchImageFromUrl SSRF', () => {
   it('revalidates redirect targets and blocks private hosts', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(
-        new Response(null, {
-          status: 302,
-          headers: { Location: 'http://127.0.0.1/secret.png' },
-        }),
-      );
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { Location: 'http://127.0.0.1/secret.png' },
+      }),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(fetchImageFromUrl('https://example.com/a.png', 1024)).rejects.toBeInstanceOf(
