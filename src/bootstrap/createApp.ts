@@ -1,11 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { WsAdapter } from '@nestjs/platform-ws';
+import type { Redis } from 'ioredis';
 import { Logger } from 'nestjs-pino';
-
 import { AppModule } from '@/app/app.module';
+import { assertCriticalDependencies } from '@/app/health/dependencyChecks';
 import { APP_CONFIG, type AppConfig } from '@/config/env';
 import { type AppLimits, LIMITS } from '@/config/limits';
+import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
+import { REDIS_CLIENT } from '@/infrastructure/redis/redis.module';
 
 import { setupSwagger } from './swagger';
 
@@ -65,6 +68,15 @@ export async function createApp(): Promise<{
   // is unavailable in the minimal production image.
   if (process.env['ENABLE_SWAGGER'] === 'true') {
     setupSwagger(app, config);
+  }
+
+  // Nest creates clients without waiting; refuse to return an app that cannot
+  // reach Postgres or Redis so `listen` never binds on a broken process.
+  try {
+    await assertCriticalDependencies(app.get<Database>(DATABASE), app.get<Redis>(REDIS_CLIENT));
+  } catch (error) {
+    await app.close();
+    throw error;
   }
 
   return { app, config };
