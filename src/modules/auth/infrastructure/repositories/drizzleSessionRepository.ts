@@ -28,6 +28,7 @@ export class DrizzleSessionRepository implements SessionRepository {
         devicePlatform: input.device.platform,
         deviceModel: input.device.model,
         appVersion: input.device.appVersion,
+        ipLabel: input.ipLabel,
         expiresAt: input.expiresAt,
       })
       .returning();
@@ -62,6 +63,27 @@ export class DrizzleSessionRepository implements SessionRepository {
     }
 
     return toSession(row);
+  }
+
+  async rotateIfHashMatches(
+    id: SessionId,
+    expectedHash: string,
+    refreshTokenHash: string,
+    expiresAt: Date,
+  ): Promise<Session | null> {
+    const [row] = await this.db
+      .update(sessions)
+      .set({ refreshTokenHash, expiresAt, lastUsedAt: new Date() })
+      .where(
+        and(
+          eq(sessions.id, id),
+          eq(sessions.refreshTokenHash, expectedHash),
+          isNull(sessions.revokedAt),
+        ),
+      )
+      .returning();
+
+    return row === undefined ? null : toSession(row);
   }
 
   async revoke(id: SessionId): Promise<void> {
@@ -103,6 +125,7 @@ function toSession(row: SessionRow): Session {
       model: row.deviceModel,
       appVersion: row.appVersion,
     },
+    ipLabel: row.ipLabel,
     createdAt: row.createdAt,
     lastUsedAt: row.lastUsedAt,
     expiresAt: row.expiresAt,

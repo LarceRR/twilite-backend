@@ -92,11 +92,13 @@ export class DrizzleUserRepository implements UserRepository {
     id: UserId,
     patch: { readonly displayName?: string; readonly avatarUrl?: string | null },
   ): Promise<User> {
+    const clearStorageKey = patch.avatarUrl !== undefined;
     const [row] = await this.db
       .update(users)
       .set({
         ...(patch.displayName === undefined ? {} : { displayName: patch.displayName }),
         ...(patch.avatarUrl === undefined ? {} : { avatarUrl: patch.avatarUrl }),
+        ...(clearStorageKey ? { avatarStorageKey: null } : {}),
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
@@ -109,6 +111,44 @@ export class DrizzleUserRepository implements UserRepository {
     const user = await this.findById(id);
 
     return user ?? toUser(row, null);
+  }
+
+  async setAvatar(
+    id: UserId,
+    avatar: { readonly avatarUrl: string; readonly avatarStorageKey: string },
+  ): Promise<{ readonly user: User; readonly previousStorageKey: string | null }> {
+    const existing = await this.db
+      .select({ avatarStorageKey: users.avatarStorageKey })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    const previous = existing[0];
+
+    if (previous === undefined) {
+      throw new NotFoundError('Пользователь не найден', { userId: id });
+    }
+
+    const [row] = await this.db
+      .update(users)
+      .set({
+        avatarUrl: avatar.avatarUrl,
+        avatarStorageKey: avatar.avatarStorageKey,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+
+    if (row === undefined) {
+      throw new NotFoundError('Пользователь не найден', { userId: id });
+    }
+
+    const user = await this.findById(id);
+
+    return {
+      user: user ?? toUser(row, null),
+      previousStorageKey: previous.avatarStorageKey,
+    };
   }
 
   async updatePreferences(id: UserId, preferences: UserPreferences): Promise<User> {

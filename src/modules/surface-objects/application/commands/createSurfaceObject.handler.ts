@@ -9,7 +9,7 @@ import {
   SURFACE_REPOSITORY,
   type SurfaceRepository,
 } from '@/modules/surfaces/domain/repositories/SurfaceRepository';
-import { spawnNearExisting } from '@/modules/surfaces/domain/services/spawnNearExisting';
+import { spawnBridgeRow } from '@/modules/surfaces/domain/services/spawnBridgeRow';
 import type { UserId } from '@/modules/users/domain/value-objects/UserId';
 import { ConflictError } from '@/shared/errors';
 import { domainEventNames, type SurfaceObjectCreatedEvent } from '@/shared/events/domainEvents';
@@ -22,7 +22,7 @@ import {
   type SurfaceObjectRepository,
 } from '../../domain/repositories/SurfaceObjectRepository';
 import { assertSubjectAllowed, defaultSubjectUserId } from '../../domain/services/subjectPolicy';
-import { kindPolicy, type SurfaceObjectKind } from '../../domain/value-objects/SurfaceObjectKind';
+import type { SurfaceObjectKind } from '../../domain/value-objects/SurfaceObjectKind';
 import { toSurfaceObjectDto } from '../mappers/surfaceObject.mapper';
 
 export type CreateSurfaceObjectCommand = {
@@ -77,11 +77,9 @@ export class CreateSurfaceObjectHandler {
       subjectUserId,
     });
     const surface = await this.surfaceResolver.resolve(space.id);
-    const radius = Math.max(kindPolicy(command.kind).spawnRadius, this.config.surface.spawnRadius);
     const created = await this.insertAtFreeCell({
       surfaceId: surface.id,
       spaceId: space.id,
-      radius,
       command,
       subjectUserId,
     });
@@ -98,7 +96,6 @@ export class CreateSurfaceObjectHandler {
   private async insertAtFreeCell(params: {
     readonly surfaceId: SurfaceObject['surfaceId'];
     readonly spaceId: SpaceId;
-    readonly radius: number;
     readonly command: CreateSurfaceObjectCommand;
     readonly subjectUserId: UserId;
   }): Promise<SurfaceObject> {
@@ -111,13 +108,10 @@ export class CreateSurfaceObjectHandler {
           latest === undefined || object.createdAt >= latest.createdAt ? object : latest,
         undefined,
       );
-      const policy = kindPolicy(params.command.kind);
-      const cell = spawnNearExisting({
+      const cell = spawnBridgeRow({
         occupied,
-        radius: params.radius,
         random: this.random,
-        minSeparation: policy.minSeparation,
-        ...(lastCreated === undefined ? {} : { near: lastCreated.cell }),
+        ...(lastCreated === undefined ? {} : { lastCreated: lastCreated.cell }),
       });
       try {
         return await this.objects.insert({

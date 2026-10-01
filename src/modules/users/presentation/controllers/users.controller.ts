@@ -1,10 +1,19 @@
-import { Body, Controller, Get, Inject, NotFoundException, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Inject, NotFoundException, Param, Patch, Post } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+
 import { UserProfileResponseDto } from '@/modules/auth/presentation/dto/auth.dto';
+import { UserRbacService } from '@/modules/rbac/application/services/rbacAdmin.services';
 import type { UserProfileDto } from '@/shared/contracts/auth.contract';
+import {
+  createAvatarUploadRequestSchema,
+  type UploadTicketDto,
+  uploadTicketSchema,
+} from '@/shared/contracts/media.contract';
 import { type AuthenticatedUser, CurrentUser } from '@/shared/decorators/auth.decorators';
+
+import { AvatarService } from '../../application/avatar.service';
 import type { User } from '../../domain/entities/User';
 import { USER_REPOSITORY, type UserRepository } from '../../domain/repositories/UserRepository';
 
@@ -23,11 +32,17 @@ const updatePreferencesSchema = z.object({
 
 class UpdateProfileDto extends createZodDto(updateProfileSchema) {}
 class UpdatePreferencesDto extends createZodDto(updatePreferencesSchema) {}
+class CreateAvatarUploadDto extends createZodDto(createAvatarUploadRequestSchema) {}
+class UploadTicketResponseDto extends createZodDto(uploadTicketSchema) {}
 
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
-  constructor(@Inject(USER_REPOSITORY) private readonly users: UserRepository) {}
+  constructor(
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    private readonly rbac: UserRbacService,
+    private readonly avatars: AvatarService,
+  ) {}
 
   @Get('me')
   @ApiOperation({ summary: 'Профиль текущего пользователя' })
@@ -39,7 +54,8 @@ export class UsersController {
       throw new NotFoundException('Пользователь не найден');
     }
 
-    return toProfileDto(profile);
+    const extras = await this.rbac.getProfileExtras(user.userId);
+    return toProfileDto(profile, extras);
   }
 
   @Patch('me')
@@ -54,7 +70,34 @@ export class UsersController {
       ...(body.avatarUrl === undefined ? {} : { avatarUrl: body.avatarUrl ?? null }),
     });
 
-    return toProfileDto(updated);
+    const extras = await this.rbac.getProfileExtras(user.userId);
+    return toProfileDto(updated, extras);
+  }
+
+  @Post('me/avatar')
+  @ApiOperation({
+    summary: 'Получить ссылку для загрузки аватара',
+    description:
+      'Клиент загружает байты напрямую в R2 по uploadUrl, затем вызывает POST /users/me/avatar/:assetId/confirm.',
+  })
+  @ApiOkResponse({ type: UploadTicketResponseDto })
+  async createAvatarUpload(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: CreateAvatarUploadDto,
+  ): Promise<UploadTicketDto> {
+    return this.avatars.createUpload(user.userId, body);
+  }
+
+  @Post('me/avatar/:assetId/confirm')
+  @ApiOperation({ summary: 'Подтвердить загрузку аватара и обновить профиль' })
+  @ApiOkResponse({ type: UserProfileResponseDto })
+  async confirmAvatar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('assetId') assetId: string,
+  ): Promise<UserProfileDto> {
+    const { user: profile } = await this.avatars.confirm(user.userId, assetId);
+    const extras = await this.rbac.getProfileExtras(user.userId);
+    return toProfileDto(profile, extras);
   }
 
   @Patch('me/preferences')
@@ -70,7 +113,6 @@ export class UsersController {
       throw new NotFoundException('Пользователь не найден');
     }
 
-    // Preferences are stored as a whole row, so unspecified fields keep their value.
     const updated = await this.users.updatePreferences(user.userId, {
       locale: body.locale ?? current.preferences.locale,
       soundEnabled: body.soundEnabled ?? current.preferences.soundEnabled,
@@ -79,11 +121,15 @@ export class UsersController {
       pushEnabled: body.pushEnabled ?? current.preferences.pushEnabled,
     });
 
-    return toProfileDto(updated);
+    const extras = await this.rbac.getProfileExtras(user.userId);
+    return toProfileDto(updated, extras);
   }
 }
 
-function toProfileDto(user: User): UserProfileDto {
+function toProfileDto(
+  user: User,
+  extras: { groups: { id: string; name: string }[]; permissions: string[] },
+): UserProfileDto {
   return {
     id: user.id,
     email: user.email,
@@ -91,5 +137,7 @@ function toProfileDto(user: User): UserProfileDto {
     avatarUrl: user.avatarUrl,
     createdAt: user.createdAt.toISOString(),
     preferences: user.preferences,
+    groups: extras.groups,
+    permissions: extras.permissions,
   };
 }

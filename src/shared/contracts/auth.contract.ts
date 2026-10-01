@@ -9,8 +9,8 @@ export const deviceInfoSchema = z.object({
 });
 
 export const authSessionSchema = z.object({
-  accessToken: z.string(),
-  refreshToken: z.string(),
+  accessToken: z.string().optional(),
+  refreshToken: z.string().optional(),
   expiresAt: isoDateTime,
   userId: uuidSchema,
 });
@@ -29,7 +29,47 @@ export const signInRequestSchema = z.object({
 });
 
 export const refreshRequestSchema = z.object({
-  refreshToken: z.string().min(1),
+  refreshToken: z.string().min(1).optional(),
+});
+
+export const qrLoginStatusSchema = z.enum(['pending', 'scanned', 'approved', 'denied', 'expired']);
+
+export const qrLoginStartRequestSchema = z.object({
+  device: deviceInfoSchema.optional(),
+});
+
+export const qrLoginStartResponseSchema = z.object({
+  challengeId: uuidSchema,
+  qrPayload: z.string().min(1),
+  pollToken: z.string().min(1),
+  expiresAt: isoDateTime,
+  expiresInSeconds: z.number().int().positive(),
+});
+
+export const qrLoginStatusRequestSchema = z.object({
+  challengeId: uuidSchema,
+  pollToken: z.string().min(16).max(128),
+});
+
+export const qrLoginStatusResponseSchema = z.object({
+  status: qrLoginStatusSchema,
+  session: authSessionSchema.optional(),
+});
+
+export const qrLoginTokenRequestSchema = z.object({
+  token: z.string().min(1).max(256),
+});
+
+export const qrLoginInspectResponseSchema = z.object({
+  challengeId: uuidSchema,
+  expiresAt: isoDateTime,
+  requestingDevice: deviceInfoSchema.extend({
+    ipLabel: z.string(),
+  }),
+});
+
+export const qrLoginDecisionResponseSchema = z.object({
+  status: z.enum(['approved', 'denied']),
 });
 
 export const userProfileSchema = z.object({
@@ -45,11 +85,14 @@ export const userProfileSchema = z.object({
     reduceMotion: z.boolean(),
     pushEnabled: z.boolean(),
   }),
+  groups: z.array(z.object({ id: uuidSchema, name: z.string() })).default([]),
+  permissions: z.array(z.string()).default([]),
 });
 
 export const sessionSchema = z.object({
   id: uuidSchema,
   device: deviceInfoSchema,
+  ipLabel: z.string().nullable(),
   createdAt: isoDateTime,
   lastUsedAt: isoDateTime,
   expiresAt: isoDateTime,
@@ -63,3 +106,10 @@ export type RefreshRequestDto = z.infer<typeof refreshRequestSchema>;
 export type UserProfileDto = z.infer<typeof userProfileSchema>;
 export type SessionDto = z.infer<typeof sessionSchema>;
 export type DeviceInfoDto = z.infer<typeof deviceInfoSchema>;
+export type QrLoginStartRequestDto = z.infer<typeof qrLoginStartRequestSchema>;
+export type QrLoginStartResponseDto = z.infer<typeof qrLoginStartResponseSchema>;
+export type QrLoginStatusRequestDto = z.infer<typeof qrLoginStatusRequestSchema>;
+export type QrLoginStatusResponseDto = z.infer<typeof qrLoginStatusResponseSchema>;
+export type QrLoginTokenRequestDto = z.infer<typeof qrLoginTokenRequestSchema>;
+export type QrLoginInspectResponseDto = z.infer<typeof qrLoginInspectResponseSchema>;
+export type QrLoginDecisionResponseDto = z.infer<typeof qrLoginDecisionResponseSchema>;

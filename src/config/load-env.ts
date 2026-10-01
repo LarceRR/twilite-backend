@@ -112,8 +112,11 @@ function loadEnvFiles(): readonly string[] {
 
   for (const file of files) {
     for (const [key, value] of parseEnvFile(readFileSync(file, 'utf8'))) {
-      // Уже заданная переменная сильнее файла.
-      if (process.env[key] === undefined) {
+      // Empty string counts as unset: otherwise a previous boot that loaded
+      // `OPENROUTER_API_KEY=` (blank) pins process.env and a later .env edit
+      // is ignored until the OS process is fully killed.
+      const current = process.env[key];
+      if (current === undefined || current.length === 0) {
         process.env[key] = value;
       }
     }

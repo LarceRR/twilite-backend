@@ -7,6 +7,8 @@ export const users = pgTable(
     email: text('email').notNull(),
     displayName: text('display_name').notNull(),
     avatarUrl: text('avatar_url'),
+    /** R2 object key for the current avatar; used to delete the previous object on replace. */
+    avatarStorageKey: text('avatar_storage_key'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

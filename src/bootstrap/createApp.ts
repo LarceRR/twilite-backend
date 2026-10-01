@@ -5,6 +5,7 @@ import { Logger } from 'nestjs-pino';
 
 import { AppModule } from '@/app/app.module';
 import { APP_CONFIG, type AppConfig } from '@/config/env';
+import { LIMITS, type AppLimits } from '@/config/limits';
 
 import { setupSwagger } from './swagger';
 
@@ -20,9 +21,26 @@ export async function createApp(): Promise<{
   );
 
   const config = app.get<AppConfig>(APP_CONFIG);
+  const limits = app.get<AppLimits>(LIMITS);
+  const logger = app.get(Logger);
 
-  app.useLogger(app.get(Logger));
+  app.useLogger(logger);
   app.flushLogs();
+
+  if (config.storage.enabled) {
+    logger.log(
+      {
+        bucket: config.storage.bucket,
+        endpoint: config.storage.endpoint,
+        publicUrlConfigured: config.storage.publicUrl.length > 0,
+      },
+      'Object storage (R2) включён',
+    );
+  } else {
+    logger.warn(
+      'Object storage выключен — задайте STORAGE_ENDPOINT и STORAGE_BUCKET в .env',
+    );
+  }
   app.setGlobalPrefix('v1', { exclude: ['health'] });
   app.useWebSocketAdapter(new WsAdapter(app));
   app.enableShutdownHooks();
@@ -34,6 +52,14 @@ export async function createApp(): Promise<{
   await app.register(import('@fastify/cors'), {
     origin: config.app.corsOrigins.length === 0 ? true : [...config.app.corsOrigins],
     credentials: true,
+  });
+
+  // Multipart lets TPG accept device uploads (field `image`) without base64 JSON.
+  await app.register(import('@fastify/multipart'), {
+    limits: {
+      files: 1,
+      fileSize: limits.tpg.imageMaxBytes,
+    },
   });
 
   // @fastify/static is an optional peer of the Swagger/Fastify integration.

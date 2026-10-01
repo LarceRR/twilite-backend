@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Module } from '@nestjs/common';
 import { LoggerModule as PinoModule } from 'nestjs-pino';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+
 import { ConfigModule } from '@/config/config.module';
 import { APP_CONFIG, type AppConfig } from '@/config/env';
 
@@ -9,8 +11,25 @@ const REDACTED = [
   'req.headers.cookie',
   'req.body.password',
   'req.body.refreshToken',
+  'req.body.pollToken',
+  'req.body.token',
+  'req.body.accessToken',
   'res.headers["set-cookie"]',
 ];
+
+function requestLine(
+  req: IncomingMessage,
+  res: ServerResponse,
+  responseTime?: number,
+): string {
+  const method = req.method ?? '?';
+  const url = req.url ?? '/';
+  const status = res.statusCode;
+  const timing = responseTime === undefined ? '' : ` +${Math.round(responseTime)}ms`;
+
+  return `${method} ${url} → ${status}${timing}`;
+}
+
 @Module({
   imports: [
     PinoModule.forRootAsync({
@@ -27,16 +46,31 @@ const REDACTED = [
           },
           redact: { paths: REDACTED, censor: '[redacted]' },
           autoLogging: { ignore: (req) => req.url === '/health' },
+          customLogLevel: (_req, res, error) => {
+            if (error !== undefined || res.statusCode >= 500) {
+              return 'error';
+            }
+
+            if (res.statusCode >= 400) {
+              return 'warn';
+            }
+
+            return 'info';
+          },
+          customSuccessMessage: (req, res, responseTime) => requestLine(req, res, responseTime),
+          customErrorMessage: (req, res, error) =>
+            `${requestLine(req, res)} — ${error.message}`,
           ...(config.app.isProduction
             ? {}
             : {
                 transport: {
                   target: 'pino-pretty',
                   options: {
-                    singleLine: true,
-                    colorize: false,
-                    translateTime: 'SYS:standard',
+                    colorize: true,
+                    translateTime: 'SYS:HH:MM:ss.l',
+                    ignore: 'pid,hostname,req,res,responseTime',
                     messageFormat: '{msg}',
+                    singleLine: true,
                   },
                 },
               }),

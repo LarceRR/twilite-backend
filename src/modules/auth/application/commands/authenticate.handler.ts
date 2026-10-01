@@ -5,6 +5,7 @@ import {
   SPACE_REPOSITORY,
   type SpaceRepository,
 } from '@/modules/spaces/domain/repositories/SpaceRepository';
+import { UserRbacService } from '@/modules/rbac/application/services/rbacAdmin.services';
 import type { User } from '@/modules/users/domain/entities/User';
 import {
   USER_REPOSITORY,
@@ -12,6 +13,7 @@ import {
 } from '@/modules/users/domain/repositories/UserRepository';
 import { toEmail } from '@/modules/users/domain/value-objects/Email';
 import type { UserId } from '@/modules/users/domain/value-objects/UserId';
+import { type AppLimits, LIMITS } from '@/config/limits';
 import type { AuthSessionDto, DeviceInfoDto } from '@/shared/contracts/auth.contract';
 import { AuthenticationError, ConflictError } from '@/shared/errors';
 
@@ -28,12 +30,14 @@ export type SignUpCommand = {
   readonly password: string;
   readonly displayName: string;
   readonly device: DeviceInfoDto | null;
+  readonly ipLabel: string | null;
 };
 
 export type SignInCommand = {
   readonly email: string;
   readonly password: string;
   readonly device: DeviceInfoDto | null;
+  readonly ipLabel: string | null;
 };
 
 const unknownDevice: DeviceInfoDto = { platform: 'unknown', model: null, appVersion: null };
@@ -47,6 +51,8 @@ export class AuthenticateHandler {
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
     private readonly createSpace: CreateSpaceHandler,
+    private readonly userRbac: UserRbacService,
+    @Inject(LIMITS) private readonly limits: AppLimits,
   ) {}
 
   /**
@@ -67,9 +73,10 @@ export class AuthenticateHandler {
       passwordHash,
     });
 
+    await this.userRbac.assignDefaultGroup(user.id);
     await this.ensurePersonalSpace(user);
 
-    return this.startSession(user.id, command.device);
+    return this.issueSession(user.id, command.device, command.ipLabel);
   }
 
   async signIn(command: SignInCommand): Promise<AuthSessionDto> {
@@ -90,8 +97,9 @@ export class AuthenticateHandler {
     }
 
     await this.ensurePersonalSpace(user);
+    await this.userRbac.ensureDefaultGroup(user.id);
 
-    return this.startSession(user.id, command.device);
+    return this.issueSession(user.id, command.device, command.ipLabel);
   }
 
   async signOut(sessionId: SessionId): Promise<void> {
@@ -110,11 +118,13 @@ export class AuthenticateHandler {
     });
   }
 
-  private async startSession(
+  async issueSession(
     userId: UserId,
     device: DeviceInfoDto | null,
+    ipLabel: string | null = null,
   ): Promise<AuthSessionDto> {
     const resolvedDevice = device ?? unknownDevice;
+    await this.enforceSessionCap(userId);
 
     // The refresh token embeds the session id, so the row is created first with a
     // placeholder hash and immediately rotated to the real one.
@@ -126,6 +136,7 @@ export class AuthenticateHandler {
         model: resolvedDevice.model ?? null,
         appVersion: resolvedDevice.appVersion ?? null,
       },
+      ipLabel,
       expiresAt: this.tokens.refreshExpiry(),
     });
 
@@ -144,5 +155,20 @@ export class AuthenticateHandler {
       expiresAt: access.expiresAt.toISOString(),
       userId,
     };
+  }
+
+  private async enforceSessionCap(userId: UserId): Promise<void> {
+    const active = await this.sessions.listForUser(userId);
+    const overflow = active.length - this.limits.auth.activeSessionsPerUser + 1;
+
+    if (overflow <= 0) {
+      return;
+    }
+
+    const oldest = [...active].sort((left, right) => left.lastUsedAt.getTime() - right.lastUsedAt.getTime());
+
+    for (const session of oldest.slice(0, overflow)) {
+      await this.sessions.revoke(session.id);
+    }
   }
 }

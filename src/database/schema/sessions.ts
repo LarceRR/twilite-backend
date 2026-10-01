@@ -13,6 +13,7 @@ export const sessions = pgTable(
     devicePlatform: text('device_platform').notNull().default('unknown'),
     deviceModel: text('device_model'),
     appVersion: text('app_version'),
+    ipLabel: text('ip_label'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),

@@ -36,6 +36,7 @@ describe.skipIf(process.env['RUN_INTEGRATION'] !== '1')('запуск прило
     expect(response.statusCode).toBe(200);
     for (const path of [
       '/v1/auth/sign-in',
+      '/v1/auth/qr/challenges',
       '/v1/spaces',
       '/v1/spaces/{spaceId}/surface',
       '/v1/spaces/{spaceId}/surface-objects',

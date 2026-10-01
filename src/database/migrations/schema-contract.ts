@@ -17,10 +17,14 @@ export const EXPECTED_TABLES = [
   'billing_webhook_events',
   'device_tokens',
   'entitlements',
+  'group_permissions',
+  'groups',
   'idempotency_records',
   'invitations',
   'media_assets',
   'notifications',
+  'permissions',
+  'pixel_objects',
   'sessions',
   'space_members',
   'spaces',
@@ -29,6 +33,8 @@ export const EXPECTED_TABLES = [
   'surfaces',
   'timeline_events',
   'user_credentials',
+  'user_groups',
+  'user_permissions',
   'user_preferences',
   'users',
 ] as const;
@@ -55,6 +61,8 @@ export const EXPECTED_INDEXES: readonly IndexContract[] = [
   { name: 'entitlements_user_key_idx', table: 'entitlements', unique: false, partial: false },
   { name: 'subscriptions_user_idx', table: 'subscriptions', unique: false, partial: false },
   { name: 'media_owner_idx', table: 'media_assets', unique: false, partial: false },
+  { name: 'pixel_objects_status_created_idx', table: 'pixel_objects', unique: false, partial: false },
+  { name: 'pixel_objects_author_idx', table: 'pixel_objects', unique: false, partial: false },
   { name: 'notifications_user_idx', table: 'notifications', unique: false, partial: false },
   { name: 'sessions_user_idx', table: 'sessions', unique: false, partial: false },
   { name: 'sessions_expires_idx', table: 'sessions', unique: false, partial: false },
@@ -66,9 +74,24 @@ export const EXPECTED_INDEXES: readonly IndexContract[] = [
   { name: 'surface_objects_state_updated_idx', table: 'surface_objects', unique: false, partial: false },
   { name: 'timeline_space_sequence_idx', table: 'timeline_events', unique: false, partial: false },
   { name: 'timeline_space_type_idx', table: 'timeline_events', unique: false, partial: false },
+  { name: 'permissions_name_unique', table: 'permissions', unique: true, partial: false },
+  { name: 'groups_name_unique', table: 'groups', unique: true, partial: false },
+  { name: 'groups_parent_idx', table: 'groups', unique: false, partial: false },
+  { name: 'group_permissions_unique', table: 'group_permissions', unique: true, partial: false },
+  { name: 'group_permissions_group_idx', table: 'group_permissions', unique: false, partial: false },
+  { name: 'group_permissions_permission_idx', table: 'group_permissions', unique: false, partial: false },
+  { name: 'user_groups_unique', table: 'user_groups', unique: true, partial: false },
+  { name: 'user_groups_user_idx', table: 'user_groups', unique: false, partial: false },
+  { name: 'user_groups_group_idx', table: 'user_groups', unique: false, partial: false },
+  { name: 'user_permissions_unique', table: 'user_permissions', unique: true, partial: false },
+  { name: 'user_permissions_user_idx', table: 'user_permissions', unique: false, partial: false },
+  { name: 'user_permissions_permission_idx', table: 'user_permissions', unique: false, partial: false },
 ];
 
-export type ForeignKeyContract = { readonly name: string; readonly onDelete: 'cascade' | 'set null' };
+export type ForeignKeyContract = {
+  readonly name: string;
+  readonly onDelete: 'cascade' | 'set null' | 'restrict';
+};
 
 /**
  * Правило удаления — часть privacy-контракта: удаление аккаунта не должно
@@ -83,6 +106,9 @@ export const EXPECTED_FOREIGN_KEYS: readonly ForeignKeyContract[] = [
   { name: 'entitlements_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'subscriptions_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'media_assets_owner_id_users_id_fk', onDelete: 'cascade' },
+  { name: 'pixel_objects_author_user_id_users_id_fk', onDelete: 'cascade' },
+  { name: 'pixel_objects_reviewed_by_user_id_users_id_fk', onDelete: 'set null' },
+  { name: 'pixel_objects_sheet_media_id_media_assets_id_fk', onDelete: 'restrict' },
   { name: 'media_assets_space_id_spaces_id_fk', onDelete: 'cascade' },
   { name: 'device_tokens_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'notifications_user_id_users_id_fk', onDelete: 'cascade' },
@@ -103,6 +129,12 @@ export const EXPECTED_FOREIGN_KEYS: readonly ForeignKeyContract[] = [
   { name: 'timeline_events_subject_user_id_users_id_fk', onDelete: 'set null' },
   { name: 'user_credentials_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'user_preferences_user_id_users_id_fk', onDelete: 'cascade' },
+  { name: 'group_permissions_group_id_groups_id_fk', onDelete: 'cascade' },
+  { name: 'group_permissions_permission_id_permissions_id_fk', onDelete: 'cascade' },
+  { name: 'user_groups_user_id_users_id_fk', onDelete: 'cascade' },
+  { name: 'user_groups_group_id_groups_id_fk', onDelete: 'cascade' },
+  { name: 'user_permissions_user_id_users_id_fk', onDelete: 'cascade' },
+  { name: 'user_permissions_permission_id_permissions_id_fk', onDelete: 'cascade' },
 ];
 
 /** Составной ключ участников пространства защищает от двойного membership. */
@@ -125,6 +157,7 @@ export const EXPECTED_COLUMN_NULLABILITY: readonly ColumnContract[] = [
   { table: 'idempotency_records', column: 'response', nullable: true },
   { table: 'idempotency_records', column: 'status_code', nullable: true },
   { table: 'users', column: 'email', nullable: false },
+  { table: 'users', column: 'avatar_storage_key', nullable: true },
   { table: 'spaces', column: 'owner_id', nullable: false },
   { table: 'spaces', column: 'version', nullable: false },
   { table: 'surfaces', column: 'version', nullable: false },
@@ -133,6 +166,7 @@ export const EXPECTED_COLUMN_NULLABILITY: readonly ColumnContract[] = [
   { table: 'space_members', column: 'role', nullable: false },
   { table: 'sessions', column: 'refresh_token_hash', nullable: false },
   { table: 'sessions', column: 'expires_at', nullable: false },
+  { table: 'sessions', column: 'ip_label', nullable: true },
 ];
 
 const MIGRATIONS_DIRECTORY = 'src/database/migrations';

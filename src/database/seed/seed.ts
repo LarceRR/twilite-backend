@@ -62,6 +62,25 @@ async function seed(): Promise<void> {
       await db.insert(schema.userPreferences).values({ userId: user.id }).onConflictDoNothing();
     }
 
+    // Ensure RBAC catalog + default groups, then assign seeded users to Admin/User.
+    const { RbacSeedService } = await import('@/modules/rbac/seed/rbacSeed.service');
+    const { DrizzleRbacRepository } = await import(
+      '@/modules/rbac/infrastructure/repositories/drizzleRbacRepository'
+    );
+    const rbacRepo = new DrizzleRbacRepository(db as never);
+    await new RbacSeedService(rbacRepo).seed();
+
+    const defaultGroup = await rbacRepo.findDefaultGroup();
+    const adminGroup = (await rbacRepo.listGroups()).find((group) => group.name === 'Admin');
+
+    if (defaultGroup !== null) {
+      await rbacRepo.assignUserToGroup(userIds[1]!, defaultGroup.id);
+    }
+
+    if (adminGroup !== undefined) {
+      await rbacRepo.assignUserToGroup(userIds[0]!, adminGroup.id);
+    }
+
     const [ownerId, partnerId] = userIds as [string, string];
 
     const [space] = await db

@@ -35,6 +35,7 @@ const envSchema = z.object({
 
   AI_PROVIDER_API_KEY: z.string().default(''),
   AI_MODEL: z.string().default('gpt-4o-mini'),
+  OPENROUTER_API_KEY: z.string().default(''),
 
   BILLING_WEBHOOK_SECRET: z.string().default(''),
 
@@ -42,6 +43,8 @@ const envSchema = z.object({
 
   SURFACE_SPAWN_RADIUS: z.coerce.number().int().min(1).max(8).default(2),
   SURFACE_AGE_AFTER_HOURS: z.coerce.number().int().min(1).default(72),
+
+  RBAC_CACHE_TTL: z.coerce.number().int().positive().default(300),
 });
 
 export type RawEnv = z.infer<typeof envSchema>;
@@ -82,6 +85,9 @@ export type AppConfig = {
     readonly apiKey: string;
     readonly model: string;
   };
+  readonly openRouter: {
+    readonly apiKey: string;
+  };
   readonly billing: {
     readonly webhookSecret: string;
   };
@@ -91,6 +97,9 @@ export type AppConfig = {
   readonly surface: {
     readonly spawnRadius: number;
     readonly ageAfterHours: number;
+  };
+  readonly rbac: {
+    readonly cacheTtlSeconds: number;
   };
 };
 
@@ -144,11 +153,18 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
       apiKey: env.AI_PROVIDER_API_KEY,
       model: env.AI_MODEL,
     },
+    openRouter: {
+      apiKey:
+        env.OPENROUTER_API_KEY.length > 0 ? env.OPENROUTER_API_KEY : env.AI_PROVIDER_API_KEY,
+    },
     billing: { webhookSecret: env.BILLING_WEBHOOK_SECRET },
     sentry: { dsn: env.SENTRY_DSN },
     surface: {
       spawnRadius: env.SURFACE_SPAWN_RADIUS,
       ageAfterHours: env.SURFACE_AGE_AFTER_HOURS,
+    },
+    rbac: {
+      cacheTtlSeconds: env.RBAC_CACHE_TTL,
     },
   };
 }

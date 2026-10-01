@@ -119,6 +119,46 @@ export const LIMIT_DEFINITIONS: readonly LimitDefinition[] = [
     owner: 'auth',
     description: 'Запросы восстановления доступа на email в час',
   },
+  {
+    key: 'LIMIT_QR_LOGIN_TTL_SECONDS',
+    path: 'auth.qrLoginTtlSeconds',
+    unit: 'seconds',
+    production: 30,
+    min: 15,
+    max: 120,
+    owner: 'auth',
+    description: 'Срок жизни QR-токена входа; как в Telegram, код сам обновляется',
+  },
+  {
+    key: 'LIMIT_QR_CHALLENGES_PER_IP_PER_HOUR',
+    path: 'auth.qrChallengesPerIpPerHour',
+    unit: 'requests/hour',
+    production: 30,
+    min: 5,
+    max: 300,
+    owner: 'auth',
+    description: 'Создание QR-вызовов с одного адреса в час',
+  },
+  {
+    key: 'LIMIT_QR_APPROVALS_PER_USER_PER_HOUR',
+    path: 'auth.qrApprovalsPerUserPerHour',
+    unit: 'requests/hour',
+    production: 60,
+    min: 5,
+    max: 300,
+    owner: 'auth',
+    description: 'Подтверждения QR-входа одним аккаунтом в час',
+  },
+  {
+    key: 'LIMIT_QR_POLLS_PER_CHALLENGE_PER_MINUTE',
+    path: 'auth.qrPollsPerChallengePerMinute',
+    unit: 'requests/minute',
+    production: 60,
+    min: 10,
+    max: 120,
+    owner: 'auth',
+    description: 'Опросы статуса одного QR-вызова в минуту',
+  },
 
   // Пространства
   {
@@ -340,6 +380,16 @@ export const LIMIT_DEFINITIONS: readonly LimitDefinition[] = [
     owner: 'media',
     description: 'Срок жизни подписанной ссылки на приватный файл',
   },
+  {
+    key: 'LIMIT_AVATAR_MAX_BYTES',
+    path: 'media.avatarMaxBytes',
+    unit: 'bytes',
+    production: 2097152,
+    min: 10240,
+    max: 10485760,
+    owner: 'media',
+    description: 'Размер аватара',
+  },
 
   // AI
   {
@@ -391,6 +441,38 @@ export const LIMIT_DEFINITIONS: readonly LimitDefinition[] = [
     max: 1000000,
     owner: 'ai',
     description: 'Суточный бюджет на AI; при исчерпании вызовы провайдера не выполняются',
+  },
+
+  // TPG — The Pixelart Generator (без персистенции)
+  {
+    key: 'LIMIT_TPG_IMAGE_MAX_BYTES',
+    path: 'tpg.imageMaxBytes',
+    unit: 'bytes',
+    production: 10485760,
+    min: 65536,
+    max: 52428800,
+    owner: 'tpg',
+    description: 'Размер исходного изображения для пикселизации',
+  },
+  {
+    key: 'LIMIT_TPG_PIXEL_OBJECT_MAX_FRAMES',
+    path: 'tpg.pixelObjectMaxFrames',
+    unit: 'items',
+    production: 64,
+    min: 1,
+    max: 256,
+    owner: 'tpg',
+    description: 'Кадров в пакете pixel object',
+  },
+  {
+    key: 'LIMIT_TPG_PIXEL_OBJECT_SHEET_MAX_BYTES',
+    path: 'tpg.pixelObjectSheetMaxBytes',
+    unit: 'bytes',
+    production: 8388608,
+    min: 1024,
+    max: 26214400,
+    owner: 'tpg',
+    description: 'Размер PNG spritesheet pixel object',
   },
 
   // Приватность и поддержка
@@ -446,6 +528,10 @@ export type AppLimits = {
     readonly signInAttemptsPerHour: number;
     readonly signUpPerIpPerHour: number;
     readonly passwordResetPerEmailPerHour: number;
+    readonly qrLoginTtlSeconds: number;
+    readonly qrChallengesPerIpPerHour: number;
+    readonly qrApprovalsPerUserPerHour: number;
+    readonly qrPollsPerChallengePerMinute: number;
   };
   readonly spaces: {
     readonly spacesPerUser: number;
@@ -477,6 +563,7 @@ export type AppLimits = {
     readonly audioMaxSeconds: number;
     readonly uploadsPerUserPerDay: number;
     readonly signedUrlTtlSeconds: number;
+    readonly avatarMaxBytes: number;
   };
   readonly ai: {
     readonly inputMaxCharacters: number;
@@ -484,6 +571,11 @@ export type AppLimits = {
     readonly requestsPerUserPerDay: number;
     readonly providerTimeoutMs: number;
     readonly dailyBudgetUsdCents: number;
+  };
+  readonly tpg: {
+    readonly imageMaxBytes: number;
+    readonly pixelObjectMaxFrames: number;
+    readonly pixelObjectSheetMaxBytes: number;
   };
   readonly privacy: {
     readonly supportMessageMaxLength: number;
@@ -555,6 +647,10 @@ export function loadLimits(source: NodeJS.ProcessEnv = process.env): AppLimits {
       signInAttemptsPerHour: at('LIMIT_SIGN_IN_ATTEMPTS_PER_HOUR'),
       signUpPerIpPerHour: at('LIMIT_SIGN_UP_PER_IP_PER_HOUR'),
       passwordResetPerEmailPerHour: at('LIMIT_PASSWORD_RESET_PER_EMAIL_PER_HOUR'),
+      qrLoginTtlSeconds: at('LIMIT_QR_LOGIN_TTL_SECONDS'),
+      qrChallengesPerIpPerHour: at('LIMIT_QR_CHALLENGES_PER_IP_PER_HOUR'),
+      qrApprovalsPerUserPerHour: at('LIMIT_QR_APPROVALS_PER_USER_PER_HOUR'),
+      qrPollsPerChallengePerMinute: at('LIMIT_QR_POLLS_PER_CHALLENGE_PER_MINUTE'),
     },
     spaces: {
       spacesPerUser: at('LIMIT_SPACES_PER_USER'),
@@ -586,6 +682,7 @@ export function loadLimits(source: NodeJS.ProcessEnv = process.env): AppLimits {
       audioMaxSeconds: at('LIMIT_MEDIA_AUDIO_MAX_SECONDS'),
       uploadsPerUserPerDay: at('LIMIT_MEDIA_UPLOADS_PER_USER_PER_DAY'),
       signedUrlTtlSeconds: at('LIMIT_MEDIA_URL_TTL_SECONDS'),
+      avatarMaxBytes: at('LIMIT_AVATAR_MAX_BYTES'),
     },
     ai: {
       inputMaxCharacters: at('LIMIT_AI_INPUT_MAX_CHARACTERS'),
@@ -593,6 +690,11 @@ export function loadLimits(source: NodeJS.ProcessEnv = process.env): AppLimits {
       requestsPerUserPerDay: at('LIMIT_AI_REQUESTS_PER_USER_PER_DAY'),
       providerTimeoutMs: at('LIMIT_AI_PROVIDER_TIMEOUT_MS'),
       dailyBudgetUsdCents: at('LIMIT_AI_DAILY_BUDGET_USD_CENTS'),
+    },
+    tpg: {
+      imageMaxBytes: at('LIMIT_TPG_IMAGE_MAX_BYTES'),
+      pixelObjectMaxFrames: at('LIMIT_TPG_PIXEL_OBJECT_MAX_FRAMES'),
+      pixelObjectSheetMaxBytes: at('LIMIT_TPG_PIXEL_OBJECT_SHEET_MAX_BYTES'),
     },
     privacy: {
       supportMessageMaxLength: at('LIMIT_SUPPORT_MESSAGE_MAX_LENGTH'),

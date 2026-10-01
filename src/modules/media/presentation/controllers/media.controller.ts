@@ -6,7 +6,11 @@ import { createZodDto } from 'nestjs-zod';
 
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets } from '@/database/schema';
-import { STORAGE, type StoragePort } from '@/infrastructure/storage/StoragePort';
+import {
+  IMMUTABLE_OBJECT_CACHE_CONTROL,
+  STORAGE,
+  type StoragePort,
+} from '@/infrastructure/storage/StoragePort';
 import { EntitlementsService } from '@/modules/billing/application/services/entitlements.service';
 import type { MediaAssetDto, UploadTicketDto } from '@/shared/contracts/media.contract';
 import {
@@ -15,7 +19,7 @@ import {
   uploadTicketSchema,
 } from '@/shared/contracts/media.contract';
 import { type AuthenticatedUser, CurrentUser } from '@/shared/decorators/auth.decorators';
-import { InfrastructureError, NotFoundError } from '@/shared/errors';
+import { InfrastructureError, NotFoundError, ValidationError } from '@/shared/errors';
 
 class CreateUploadDto extends createZodDto(createUploadRequestSchema) {}
 class UploadTicketResponseDto extends createZodDto(uploadTicketSchema) {}
@@ -45,6 +49,12 @@ export class MediaController {
       await this.entitlements.assertGranted(user.userId, 'canUploadVoice');
     }
 
+    if (body.kind === 'pixel-sheet' && body.contentType !== 'image/png') {
+      throw new ValidationError('Spritesheet должен быть PNG', [
+        { path: 'contentType', message: 'Ожидается image/png' },
+      ]);
+    }
+
     if (!this.storage.enabled) {
       throw new InfrastructureError('Загрузка файлов недоступна: хранилище не настроено');
     }
@@ -71,6 +81,7 @@ export class MediaController {
       key: storageKey,
       contentType: body.contentType,
       byteSize: body.byteSize,
+      cacheControl: IMMUTABLE_OBJECT_CACHE_CONTROL,
     });
 
     return {
@@ -78,6 +89,10 @@ export class MediaController {
       uploadUrl: upload.url,
       storageKey,
       expiresAt: upload.expiresAt.toISOString(),
+      headers: {
+        'Content-Type': body.contentType,
+        'Cache-Control': IMMUTABLE_OBJECT_CACHE_CONTROL,
+      },
     };
   }
 
