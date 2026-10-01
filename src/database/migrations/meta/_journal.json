@@ -17,6 +17,13 @@
       "breakpoints": true
     },
     {
+      "idx": 2,
+      "version": "7",
+      "when": 1787000000000,
+      "tag": "0002_idempotency_reservations",
+      "breakpoints": true
+    },
+    {
       "idx": 3,
       "version": "7",
       "when": 1787952000000,
@@ -49,6 +56,20 @@
       "version": "7",
       "when": 1791200000000,
       "tag": "0007_pixel_objects",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791300000000,
+      "tag": "0008_pixel_object_revisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791400000000,
+      "tag": "0009_pixel_archive_and_surface_binding",
       "breakpoints": true
     }
   ]

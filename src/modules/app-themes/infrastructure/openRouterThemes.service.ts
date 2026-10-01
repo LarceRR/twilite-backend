@@ -2,8 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { APP_CONFIG, type AppConfig } from '@/config/env';
 import {
-  generatedAppThemeSchema,
   type GeneratedAppThemeDto,
+  generatedAppThemeSchema,
 } from '@/shared/contracts/appThemes.contract';
 import { InfrastructureError, ValidationError } from '@/shared/errors';
 
@@ -31,8 +31,7 @@ export class OpenRouterThemesService {
 
   async listFreeModels(): Promise<readonly FreeModel[]> {
     const apiKey = this.apiKey();
-    const url =
-      'https://openrouter.ai/api/v1/models?max_price=0&max_completion_price=0&limit=100';
+    const url = 'https://openrouter.ai/api/v1/models?max_price=0&max_completion_price=0&limit=100';
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -52,8 +51,8 @@ export class OpenRouterThemesService {
     return models
       .filter(isFreeModel)
       .map((model) => ({
-        id: model.id!,
-        name: model.name ?? model.id!,
+        id: model.id,
+        name: model.name ?? model.id,
         contextLength: model.context_length ?? null,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -110,7 +109,7 @@ export class OpenRouterThemesService {
   }
 }
 
-function isFreeModel(model: OpenRouterModel): boolean {
+function isFreeModel(model: OpenRouterModel): model is OpenRouterModel & { id: string } {
   if (typeof model.id !== 'string' || model.id.length === 0) {
     return false;
   }

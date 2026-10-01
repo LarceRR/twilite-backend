@@ -1,9 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { Logger } from 'nestjs-pino';
 
-import { LIMITS, type AppLimits } from '@/config/limits';
+import { type AppLimits, LIMITS } from '@/config/limits';
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets } from '@/database/schema';
 import {
@@ -11,6 +10,7 @@ import {
   STORAGE,
   type StoragePort,
 } from '@/infrastructure/storage/StoragePort';
+import { buildOpaqueStorageKey } from '@/modules/media/domain/opaqueStorageKey';
 import type {
   CreateAvatarUploadRequest,
   MediaAssetDto,
@@ -46,7 +46,7 @@ export class AvatarService {
       ]);
     }
 
-    const storageKey = `${userId}/avatar/${randomUUID()}`;
+    const storageKey = buildOpaqueStorageKey('avatar');
 
     const [asset] = await this.db
       .insert(mediaAssets)
@@ -116,7 +116,9 @@ export class AvatarService {
     const publicUrl = this.storage.publicUrl(asset.storageKey);
 
     if (publicUrl === null) {
-      throw new InfrastructureError('STORAGE_PUBLIC_URL не настроен — публичный URL аватара недоступен');
+      throw new InfrastructureError(
+        'STORAGE_PUBLIC_URL не настроен — публичный URL аватара недоступен',
+      );
     }
 
     const [ready] = await this.db
@@ -153,10 +155,7 @@ export class AvatarService {
   }
 }
 
-function toAssetDto(
-  asset: typeof mediaAssets.$inferSelect,
-  url: string | null,
-): MediaAssetDto {
+function toAssetDto(asset: typeof mediaAssets.$inferSelect, url: string | null): MediaAssetDto {
   return {
     id: asset.id,
     kind: 'avatar',

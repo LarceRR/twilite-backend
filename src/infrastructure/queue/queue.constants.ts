@@ -17,6 +17,7 @@ export const jobNames = {
   ageSurfaceObjects: 'age-surface-objects',
   trackEvent: 'track-event',
   confirmUpload: 'confirm-upload',
+  gcPendingMedia: 'gc-pending-media',
 } as const;
 
 export const defaultJobOptions = {

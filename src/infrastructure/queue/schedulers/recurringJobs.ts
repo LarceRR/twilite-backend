@@ -5,12 +5,15 @@ import { jobNames, queueNames } from '../queue.constants';
 
 const HOURLY = { pattern: '0 * * * *' } as const;
 const DAILY = { pattern: '15 3 * * *' } as const;
+
 @Injectable()
 export class RecurringJobs implements OnApplicationBootstrap {
   constructor(
     @InjectQueue(queueNames.surfaceLifecycle) private readonly lifecycle: Queue,
     @InjectQueue(queueNames.cleanup) private readonly cleanup: Queue,
+    @InjectQueue(queueNames.media) private readonly media: Queue,
   ) {}
+
   async onApplicationBootstrap(): Promise<void> {
     if (process.env['NODE_ENV'] === 'test') return;
     await this.lifecycle.add(
@@ -22,6 +25,11 @@ export class RecurringJobs implements OnApplicationBootstrap {
       jobNames.expireSessions,
       {},
       { repeat: DAILY, jobId: jobNames.expireSessions },
+    );
+    await this.media.add(
+      jobNames.gcPendingMedia,
+      {},
+      { repeat: HOURLY, jobId: jobNames.gcPendingMedia },
     );
   }
 }

@@ -3,9 +3,11 @@ FROM node:22.23.1-bookworm-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
+COPY packages/contracts/package.json ./packages/contracts/package.json
 RUN npm ci --legacy-peer-deps --no-optional
 
 COPY tsconfig.json tsconfig.build.json nest-cli.json .swcrc ./
+COPY packages/contracts ./packages/contracts
 COPY src ./src
 
 RUN npm run build && npm prune --omit=dev
@@ -21,6 +23,7 @@ RUN groupadd --system twilite \
     && useradd --system --gid twilite --create-home --no-log-init twilite
 
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/src/database/migrations ./src/database/migrations

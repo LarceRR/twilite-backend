@@ -1,5 +1,5 @@
-import { oklabDistanceSq, rgbToOklab, toPaletteEntries, type PaletteEntry } from './oklab';
-import { isOpaqueEnough, type Rgb } from './rawRgba';
+import { oklabDistanceSq, type PaletteEntry, rgbToOklab, toPaletteEntries } from './oklab';
+import { isOpaqueEnough, type Rgb, sampleAt } from './rawRgba';
 
 /** Nearest palette colour by Oklab distance (looks closer to the eye than sRGB). */
 export function nearestPaletteColor(r: number, g: number, b: number, palette: readonly Rgb[]): Rgb {
@@ -14,7 +14,11 @@ export function nearestPaletteEntry(
   entries: readonly PaletteEntry[],
 ): PaletteEntry {
   const target = rgbToOklab(r, g, b);
-  let best = entries[0]!;
+  const first = entries[0];
+  if (first === undefined) {
+    throw new Error('palette must contain at least one colour');
+  }
+  let best = first;
   let bestDist = Number.POSITIVE_INFINITY;
 
   for (const entry of entries) {
@@ -33,14 +37,19 @@ export function mapToPalette(data: Uint8ClampedArray, palette: readonly Rgb[]): 
   const entries = toPaletteEntries(palette);
 
   for (let i = 0; i < data.length; i += 4) {
-    if (!isOpaqueEnough(data[i + 3]!)) {
+    if (!isOpaqueEnough(sampleAt(data, i + 3))) {
       data[i] = 0;
       data[i + 1] = 0;
       data[i + 2] = 0;
       continue;
     }
 
-    const { rgb } = nearestPaletteEntry(data[i]!, data[i + 1]!, data[i + 2]!, entries);
+    const { rgb } = nearestPaletteEntry(
+      sampleAt(data, i),
+      sampleAt(data, i + 1),
+      sampleAt(data, i + 2),
+      entries,
+    );
     data[i] = rgb[0];
     data[i + 1] = rgb[1];
     data[i + 2] = rgb[2];

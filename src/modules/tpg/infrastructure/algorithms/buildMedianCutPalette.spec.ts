@@ -15,9 +15,18 @@ describe('median-cut + palette map', () => {
 
   it('игнорирует прозрачные пиксели в палитре', () => {
     const data = new Uint8ClampedArray([
-      0, 0, 0, 0, // transparent black — must not enter the palette
-      255, 0, 0, 255,
-      255, 0, 0, 255,
+      0,
+      0,
+      0,
+      0, // transparent black — must not enter the palette
+      255,
+      0,
+      0,
+      255,
+      255,
+      0,
+      0,
+      255,
     ]);
     const palette = buildMedianCutPalette(data, 2);
     expect(palette.every(([r, g, b]) => r > 200 && g < 50 && b < 50)).toBe(true);

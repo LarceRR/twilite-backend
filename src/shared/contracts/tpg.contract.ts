@@ -8,7 +8,7 @@ import {
   PIXEL_ART_ALGORITHMS,
 } from '@/modules/tpg/domain/algorithms/pixelArtAlgorithm';
 
-export { PIXEL_ART_ALGORITHMS, DEFAULT_PIXEL_ART_ALGORITHM, DEFAULT_PALETTE_SIZE };
+export { DEFAULT_PALETTE_SIZE, DEFAULT_PIXEL_ART_ALGORITHM, PIXEL_ART_ALGORITHMS };
 
 /** Longest side of a fitted TPG image (aspect ratio preserved). */
 export const TPG_MAX_EDGE = 400;

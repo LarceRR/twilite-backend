@@ -1,6 +1,6 @@
 import { nearestPaletteEntry } from './mapToPalette';
 import { toPaletteEntries } from './oklab';
-import { isOpaqueEnough, type RawRgbaImage, type Rgb } from './rawRgba';
+import { isOpaqueEnough, type RawRgbaImage, type Rgb, sampleAt } from './rawRgba';
 
 type DiffuseFn = (
   buffer: Float32Array,
@@ -26,11 +26,7 @@ export function ditherAtkinson(image: RawRgbaImage, palette: readonly Rgb[]): vo
   runErrorDiffusion(image, palette, diffuseAtkinson);
 }
 
-function runErrorDiffusion(
-  image: RawRgbaImage,
-  palette: readonly Rgb[],
-  diffuse: DiffuseFn,
-): void {
+function runErrorDiffusion(image: RawRgbaImage, palette: readonly Rgb[], diffuse: DiffuseFn): void {
   const { data, width, height } = image;
   const entries = toPaletteEntries(palette);
   const buffer = Float32Array.from(data);
@@ -38,16 +34,16 @@ function runErrorDiffusion(
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const i = (y * width + x) * 4;
-      if (!isOpaqueEnough(data[i + 3]!)) {
+      if (!isOpaqueEnough(sampleAt(data, i + 3))) {
         data[i] = 0;
         data[i + 1] = 0;
         data[i + 2] = 0;
         continue;
       }
 
-      const oldR = buffer[i]!;
-      const oldG = buffer[i + 1]!;
-      const oldB = buffer[i + 2]!;
+      const oldR = sampleAt(buffer, i);
+      const oldG = sampleAt(buffer, i + 1);
+      const oldB = sampleAt(buffer, i + 2);
       const { rgb } = nearestPaletteEntry(oldR, oldG, oldB, entries);
 
       data[i] = rgb[0];
@@ -111,8 +107,8 @@ function addError(
 ): void {
   if (x < 0 || y < 0 || x >= width || y >= height) return;
   const i = (y * width + x) * 4;
-  if (!isOpaqueEnough(data[i + 3]!)) return;
-  buffer[i] = buffer[i]! + errR * weight;
-  buffer[i + 1] = buffer[i + 1]! + errG * weight;
-  buffer[i + 2] = buffer[i + 2]! + errB * weight;
+  if (!isOpaqueEnough(sampleAt(data, i + 3))) return;
+  buffer[i] = sampleAt(buffer, i) + errR * weight;
+  buffer[i + 1] = sampleAt(buffer, i + 1) + errG * weight;
+  buffer[i + 2] = sampleAt(buffer, i + 2) + errB * weight;
 }

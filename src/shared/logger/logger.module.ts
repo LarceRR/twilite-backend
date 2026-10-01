@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Module } from '@nestjs/common';
 import { LoggerModule as PinoModule } from 'nestjs-pino';
-import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { ConfigModule } from '@/config/config.module';
 import { APP_CONFIG, type AppConfig } from '@/config/env';
@@ -17,11 +17,7 @@ const REDACTED = [
   'res.headers["set-cookie"]',
 ];
 
-function requestLine(
-  req: IncomingMessage,
-  res: ServerResponse,
-  responseTime?: number,
-): string {
+function requestLine(req: IncomingMessage, res: ServerResponse, responseTime?: number): string {
   const method = req.method ?? '?';
   const url = req.url ?? '/';
   const status = res.statusCode;
@@ -58,8 +54,7 @@ function requestLine(
             return 'info';
           },
           customSuccessMessage: (req, res, responseTime) => requestLine(req, res, responseTime),
-          customErrorMessage: (req, res, error) =>
-            `${requestLine(req, res)} — ${error.message}`,
+          customErrorMessage: (req, res, error) => `${requestLine(req, res)} — ${error.message}`,
           ...(config.app.isProduction
             ? {}
             : {

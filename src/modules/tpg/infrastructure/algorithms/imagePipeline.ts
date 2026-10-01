@@ -3,21 +3,27 @@ import sharp from 'sharp';
 import { InfrastructureError, ValidationError } from '@/shared/errors';
 
 import { MAX_EDGE } from '../../domain/constants';
-import { createRawRgba, type RawRgbaImage } from './rawRgba';
+import { createRawRgba, type RawRgbaImage, sampleAt } from './rawRgba';
 
 /** Scale so neither side exceeds MAX_EDGE; never stretch. Keeps alpha. */
 export async function fitInsideMaxEdge(source: Buffer): Promise<Buffer> {
   try {
-    return await sharp(source)
+    return await sharp(source, {
+      animated: false,
+      limitInputPixels: 64 * 1024 * 1024,
+      failOn: 'error',
+    })
       .rotate()
       .ensureAlpha()
       .resize(MAX_EDGE, MAX_EDGE, { fit: 'inside' })
       .png()
       .toBuffer();
   } catch (origin) {
-    throw new ValidationError('Файл не является изображением', [
-      { path: 'image', message: 'Не удалось декодировать PNG/JPEG/WebP/GIF' },
-    ], { origin: String(origin) });
+    throw new ValidationError(
+      'Файл не является изображением',
+      [{ path: 'image', message: 'Не удалось декодировать PNG/JPEG/WebP/GIF' }],
+      { origin: String(origin) },
+    );
   }
 }
 
@@ -65,16 +71,13 @@ export async function upscaleNearest(
 ): Promise<Buffer> {
   const smallPng = await encodeNativePng(image);
 
-  return sharp(smallPng)
-    .resize(width, height, { kernel: sharp.kernel.nearest })
-    .png()
-    .toBuffer();
+  return sharp(smallPng).resize(width, height, { kernel: sharp.kernel.nearest }).png().toBuffer();
 }
 
 /** Soft anti-aliased edges → hard sprite alpha (good for game assets). */
 export function hardenAlpha(image: RawRgbaImage, cutoff = 128): void {
   for (let i = 3; i < image.data.length; i += 4) {
-    image.data[i] = image.data[i]! >= cutoff ? 255 : 0;
+    image.data[i] = sampleAt(image.data, i) >= cutoff ? 255 : 0;
     if (image.data[i] === 0) {
       image.data[i - 3] = 0;
       image.data[i - 2] = 0;

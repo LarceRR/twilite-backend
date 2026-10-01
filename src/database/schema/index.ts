@@ -5,6 +5,7 @@ export * from './billing';
 export * from './idempotency';
 export * from './media';
 export * from './notifications';
+export * from './pixelObjectRevisions';
 export * from './pixelObjects';
 export * from './rbac';
 export * from './sessions';

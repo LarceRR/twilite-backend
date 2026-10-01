@@ -154,8 +154,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
       model: env.AI_MODEL,
     },
     openRouter: {
-      apiKey:
-        env.OPENROUTER_API_KEY.length > 0 ? env.OPENROUTER_API_KEY : env.AI_PROVIDER_API_KEY,
+      apiKey: env.OPENROUTER_API_KEY.length > 0 ? env.OPENROUTER_API_KEY : env.AI_PROVIDER_API_KEY,
     },
     billing: { webhookSecret: env.BILLING_WEBHOOK_SECRET },
     sentry: { dsn: env.SENTRY_DSN },

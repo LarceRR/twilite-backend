@@ -1,13 +1,12 @@
 import { type CanActivate, type ExecutionContext, Inject, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { FastifyRequest } from 'fastify';
-
+import { readAccessToken } from '@/modules/auth/application/services/sessionCookies';
+import { TokenService } from '@/modules/auth/application/services/token.service';
 import {
   SESSION_REPOSITORY,
   type SessionRepository,
 } from '@/modules/auth/domain/repositories/SessionRepository';
-import { readAccessToken } from '@/modules/auth/application/services/sessionCookies';
-import { TokenService } from '@/modules/auth/application/services/token.service';
 import { AuthenticationError } from '@/shared/errors';
 import { CLOCK, type Clock } from '@/shared/utils/clock';
 

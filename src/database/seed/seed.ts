@@ -70,18 +70,21 @@ async function seed(): Promise<void> {
     const rbacRepo = new DrizzleRbacRepository(db as never);
     await new RbacSeedService(rbacRepo).seed();
 
+    const [ownerId, partnerId] = userIds;
+    if (ownerId === undefined || partnerId === undefined) {
+      throw new Error('Seed expects at least two users');
+    }
+
     const defaultGroup = await rbacRepo.findDefaultGroup();
     const adminGroup = (await rbacRepo.listGroups()).find((group) => group.name === 'Admin');
 
     if (defaultGroup !== null) {
-      await rbacRepo.assignUserToGroup(userIds[1]!, defaultGroup.id);
+      await rbacRepo.assignUserToGroup(partnerId, defaultGroup.id);
     }
 
     if (adminGroup !== undefined) {
-      await rbacRepo.assignUserToGroup(userIds[0]!, adminGroup.id);
+      await rbacRepo.assignUserToGroup(ownerId, adminGroup.id);
     }
-
-    const [ownerId, partnerId] = userIds as [string, string];
 
     const [space] = await db
       .insert(schema.spaces)
