@@ -1,0 +1,20 @@
+{
+  "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "spaceId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "surfaceId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+  "cellX": 1,
+  "cellY": 0,
+  "kind": "Fire",
+  "state": "active",
+  "createdByUserId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  "subjectUserId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+  "metadata": {
+    "pixelObjectId": "ffffffff-ffff-4fff-8fff-ffffffffffff"
+  },
+  "favorite": false,
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "version": 1,
+  "pixelObjectId": null,
+  "pixelObject": null
+}

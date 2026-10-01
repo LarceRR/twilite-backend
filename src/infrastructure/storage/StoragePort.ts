@@ -5,6 +5,12 @@ export type PresignedUpload = {
   readonly expiresAt: Date;
 };
 
+export type StorageObjectHead = {
+  readonly contentLength: number;
+  readonly contentType: string | null;
+  readonly exists: true;
+};
+
 /**
  * A port so media does not depend on a specific object store. R2 today, anything
  * S3-compatible tomorrow.
@@ -19,8 +25,22 @@ export interface StoragePort {
     readonly cacheControl?: string;
   }): Promise<PresignedUpload>;
   publicUrl(key: string): string | null;
-  /** Read an object the API itself stored. Used to validate uploads before publish. */
-  getObject(key: string): Promise<Buffer>;
+  /**
+   * Metadata-only probe. Must not download object bytes.
+   * Returns null when the key is missing.
+   */
+  headObject(key: string): Promise<StorageObjectHead | null>;
+  /**
+   * Read object bytes with a hard size cap (P1-S3).
+   * HEAD first; never downloads when contentLength exceeds maxBytes.
+   */
+  getObject(key: string, options: { readonly maxBytes: number }): Promise<Buffer>;
+  /** Server-side write used for generated previews (P2-S11). */
+  putObject(params: {
+    readonly key: string;
+    readonly body: Buffer;
+    readonly contentType: string;
+  }): Promise<void>;
   delete(key: string): Promise<void>;
 }
 

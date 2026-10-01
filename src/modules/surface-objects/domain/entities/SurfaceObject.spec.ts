@@ -33,6 +33,7 @@ function makeObject(overrides: Partial<SurfaceObject> = {}): SurfaceObject {
     subjectUserId: 'user-2' as UserId,
     metadata: {},
     favorite: false,
+    pixelObjectId: null,
     createdAt: NOW,
     updatedAt: NOW,
     version: 1,

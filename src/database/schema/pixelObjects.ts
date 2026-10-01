@@ -7,6 +7,7 @@ export const pixelObjectStatusEnum = pgEnum('pixel_object_status', [
   'pending',
   'published',
   'rejected',
+  'archived',
 ]);
 
 export const pixelObjects = pgTable(

@@ -91,6 +91,7 @@ export const EXPECTED_INDEXES: readonly IndexContract[] = [
   { name: 'surface_objects_surface_idx', table: 'surface_objects', unique: false, partial: false },
   { name: 'surface_objects_space_idx', table: 'surface_objects', unique: false, partial: false },
   { name: 'surface_objects_state_updated_idx', table: 'surface_objects', unique: false, partial: false },
+  { name: 'surface_objects_pixel_object_idx', table: 'surface_objects', unique: false, partial: false },
   { name: 'timeline_space_sequence_idx', table: 'timeline_events', unique: false, partial: false },
   { name: 'timeline_space_type_idx', table: 'timeline_events', unique: false, partial: false },
   { name: 'permissions_name_unique', table: 'permissions', unique: true, partial: false },
@@ -148,6 +149,7 @@ export const EXPECTED_FOREIGN_KEYS: readonly ForeignKeyContract[] = [
   { name: 'surface_objects_surface_id_surfaces_id_fk', onDelete: 'cascade' },
   { name: 'surface_objects_created_by_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'surface_objects_subject_user_id_users_id_fk', onDelete: 'cascade' },
+  { name: 'surface_objects_pixel_object_id_pixel_objects_id_fk', onDelete: 'set null' },
   { name: 'surfaces_space_id_spaces_id_fk', onDelete: 'cascade' },
   { name: 'timeline_events_space_id_spaces_id_fk', onDelete: 'cascade' },
   { name: 'timeline_events_actor_user_id_users_id_fk', onDelete: 'set null' },
@@ -198,6 +200,7 @@ export const EXPECTED_COLUMN_NULLABILITY: readonly ColumnContract[] = [
   { table: 'pixel_object_revisions', column: 'published_at', nullable: true },
   { table: 'pixel_object_revisions', column: 'content_hash', nullable: false },
   { table: 'pixel_object_revisions', column: 'revision_number', nullable: false },
+  { table: 'surface_objects', column: 'pixel_object_id', nullable: true },
 ];
 
 const MIGRATIONS_DIRECTORY = 'src/database/migrations';

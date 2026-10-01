@@ -72,6 +72,7 @@ export class DrizzleSurfaceObjectRepository implements SurfaceObjectRepository {
           createdByUserId: input.createdByUserId,
           subjectUserId: input.subjectUserId,
           metadata: input.metadata,
+          pixelObjectId: input.pixelObjectId ?? null,
         })
         .returning();
 
@@ -163,6 +164,7 @@ function toSurfaceObject(row: ObjectRow): SurfaceObject {
     subjectUserId: toUserId(row.subjectUserId),
     metadata: (row.metadata ?? {}) as SurfaceObjectMetadata,
     favorite: row.favorite,
+    pixelObjectId: row.pixelObjectId ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     version: row.version,

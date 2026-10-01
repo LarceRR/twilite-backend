@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Body, Controller, Inject, Param, Post } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { eq } from 'drizzle-orm';
 import { createZodDto } from 'nestjs-zod';
 
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
@@ -19,7 +18,9 @@ import {
   uploadTicketSchema,
 } from '@/shared/contracts/media.contract';
 import { type AuthenticatedUser, CurrentUser } from '@/shared/decorators/auth.decorators';
-import { InfrastructureError, NotFoundError, ValidationError } from '@/shared/errors';
+import { InfrastructureError, ValidationError } from '@/shared/errors';
+
+import { ConfirmMediaUploadService } from '../../application/confirmMediaUpload.service';
 
 class CreateUploadDto extends createZodDto(createUploadRequestSchema) {}
 class UploadTicketResponseDto extends createZodDto(uploadTicketSchema) {}
@@ -32,6 +33,7 @@ export class MediaController {
     @Inject(DATABASE) private readonly db: Database,
     @Inject(STORAGE) private readonly storage: StoragePort,
     private readonly entitlements: EntitlementsService,
+    private readonly confirmUpload: ConfirmMediaUploadService,
   ) {}
 
   /**
@@ -99,25 +101,10 @@ export class MediaController {
   @Post('uploads/:assetId/confirm')
   @ApiOperation({ summary: 'Подтвердить успешную загрузку' })
   @ApiOkResponse({ type: MediaAssetResponseDto })
-  async confirm(@Param('assetId') assetId: string): Promise<MediaAssetDto> {
-    const [asset] = await this.db
-      .update(mediaAssets)
-      .set({ status: 'ready', confirmedAt: new Date() })
-      .where(eq(mediaAssets.id, assetId))
-      .returning();
-
-    if (asset === undefined) {
-      throw new NotFoundError('Файл не найден', { assetId });
-    }
-
-    return {
-      id: asset.id,
-      kind: asset.kind as MediaAssetDto['kind'],
-      url: this.storage.publicUrl(asset.storageKey),
-      contentType: asset.contentType,
-      byteSize: asset.byteSize,
-      status: 'ready',
-      createdAt: asset.createdAt.toISOString(),
-    };
+  async confirm(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('assetId') assetId: string,
+  ): Promise<MediaAssetDto> {
+    return this.confirmUpload.confirm(user.userId, assetId);
   }
 }
