@@ -6,6 +6,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
 import { createZodDto } from 'nestjs-zod';
 
@@ -15,6 +16,7 @@ import {
   pixelateFromUrlRequestSchema,
   pixelateResponseSchema,
 } from '@/shared/contracts/tpg.contract';
+import { RequireRbac } from '@/shared/decorators/rbac.decorators';
 import { ValidationError } from '@/shared/errors';
 
 import { GeneratePixelArtHandler } from '../../application/commands/generatePixelArt.handler';
@@ -34,6 +36,8 @@ export class TpgController {
   constructor(private readonly generate: GeneratePixelArtHandler) {}
 
   @Post('pixelate/url')
+  @RequireRbac('tpg.pixelate.use')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Пикселизация изображения по прямому URL' })
   @ApiOkResponse({ type: PixelateResponseDtoClass })
   async pixelateFromUrl(@Body() body: PixelateFromUrlDto): Promise<PixelateResponseDto> {
@@ -46,6 +50,8 @@ export class TpgController {
   }
 
   @Post('pixelate/upload')
+  @RequireRbac('tpg.pixelate.use')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Пикселизация загруженного файла' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

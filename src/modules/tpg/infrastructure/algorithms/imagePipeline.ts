@@ -8,7 +8,11 @@ import { createRawRgba, type RawRgbaImage } from './rawRgba';
 /** Scale so neither side exceeds MAX_EDGE; never stretch. Keeps alpha. */
 export async function fitInsideMaxEdge(source: Buffer): Promise<Buffer> {
   try {
-    return await sharp(source)
+    return await sharp(source, {
+      animated: false,
+      limitInputPixels: 64 * 1024 * 1024,
+      failOn: 'error',
+    })
       .rotate()
       .ensureAlpha()
       .resize(MAX_EDGE, MAX_EDGE, { fit: 'inside' })

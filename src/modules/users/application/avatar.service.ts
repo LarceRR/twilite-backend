@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { Logger } from 'nestjs-pino';
@@ -11,6 +10,7 @@ import {
   STORAGE,
   type StoragePort,
 } from '@/infrastructure/storage/StoragePort';
+import { buildOpaqueStorageKey } from '@/modules/media/domain/opaqueStorageKey';
 import type {
   CreateAvatarUploadRequest,
   MediaAssetDto,
@@ -46,7 +46,7 @@ export class AvatarService {
       ]);
     }
 
-    const storageKey = `${userId}/avatar/${randomUUID()}`;
+    const storageKey = buildOpaqueStorageKey('avatar');
 
     const [asset] = await this.db
       .insert(mediaAssets)

@@ -1,5 +1,16 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { pixelObjectLimitsSchema } from '@twilite/contracts';
 import { createZodDto } from 'nestjs-zod';
 
@@ -76,7 +87,7 @@ export class PixelObjectsController {
   @RequireRbac('tpg.pixelObjects.readPublished')
   @ApiOperation({ summary: 'DTO для мобильного плеера: sheet URL и default loop' })
   @ApiOkResponse({ type: PixelObjectMobileDtoClass })
-  async mobile(@Param('id') id: string) {
+  async mobile(@Param('id', ParseUUIDPipe) id: string) {
     return this.objects.getMobile(id);
   }
 
@@ -84,12 +95,13 @@ export class PixelObjectsController {
   @RequireRbac('tpg.pixelObjects.readPublished')
   @ApiOperation({ summary: 'Опубликованный пиксельный объект' })
   @ApiOkResponse({ type: PixelObjectDtoClass })
-  async getPublished(@Param('id') id: string) {
+  async getPublished(@Param('id', ParseUUIDPipe) id: string) {
     return this.objects.getPublished(id);
   }
 
   @Post()
   @RequireAnyRbac('tpg.pixelObjects.submit', 'tpg.pixelObjects.create')
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @ApiOperation({ summary: 'Отправить пиксельный объект на модерацию' })
   @ApiOkResponse({ type: PixelObjectDtoClass })
   async submit(
@@ -102,11 +114,12 @@ export class PixelObjectsController {
 
   @Patch(':id')
   @RequireAnyRbac('tpg.pixelObjects.submit', 'tpg.pixelObjects.create')
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @ApiOperation({ summary: 'Исправить отклонённый или опубликованный объект и отправить снова' })
   @ApiOkResponse({ type: PixelObjectDtoClass })
   async resubmit(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Body() body: SubmitPixelObjectDtoClass,
   ) {
@@ -121,25 +134,33 @@ export class PixelObjectsController {
   )
   @ApiOperation({ summary: 'Архивировать объект (каталог скрывает, размещения остаются)' })
   @ApiOkResponse({ type: PixelObjectDtoClass })
-  async archive(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  async archive(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.objects.archive(user.userId, id);
   }
 
   @Post(':id/publish')
   @RequireRbac('tpg.pixelObjects.moderate')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOperation({ summary: 'Опубликовать пиксельный объект' })
   @ApiOkResponse({ type: PixelObjectDtoClass })
-  async publish(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  async publish(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.objects.publish(user.userId, id);
   }
 
   @Post(':id/reject')
   @RequireRbac('tpg.pixelObjects.moderate')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOperation({ summary: 'Отклонить пиксельный объект' })
   @ApiOkResponse({ type: PixelObjectDtoClass })
   async reject(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: RejectPixelObjectDtoClass,
   ) {
     return this.objects.reject(user.userId, id, body.comment);

@@ -1,8 +1,17 @@
-import { randomUUID } from 'node:crypto';
-import { Body, Controller, Headers, Inject, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Headers,
+  Inject,
+  Param,
+  ParseUUIDPipe,
+  Post,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { createZodDto } from 'nestjs-zod';
 
+import { LIMITS, type AppLimits } from '@/config/limits';
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets } from '@/database/schema';
 import {
@@ -18,10 +27,14 @@ import {
   uploadTicketSchema,
 } from '@/shared/contracts/media.contract';
 import { type AuthenticatedUser, CurrentUser } from '@/shared/decorators/auth.decorators';
-import { InfrastructureError, ValidationError } from '@/shared/errors';
+import { RequireRbac } from '@/shared/decorators/rbac.decorators';
+import { InfrastructureError } from '@/shared/errors';
 import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 
+import { assertMediaUploadPolicy, mediaQuotaExceededError } from '../../application/assertMediaUploadPolicy';
 import { ConfirmMediaUploadService } from '../../application/confirmMediaUpload.service';
+import { countUploadsToday } from '../../application/countUploadsToday';
+import { buildOpaqueStorageKey } from '../../domain/opaqueStorageKey';
 
 class CreateUploadDto extends createZodDto(createUploadRequestSchema) {}
 class UploadTicketResponseDto extends createZodDto(uploadTicketSchema) {}
@@ -33,6 +46,7 @@ export class MediaController {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Inject(STORAGE) private readonly storage: StoragePort,
+    @Inject(LIMITS) private readonly limits: AppLimits,
     private readonly entitlements: EntitlementsService,
     private readonly confirmUpload: ConfirmMediaUploadService,
     private readonly idempotency: IdempotencyService,
@@ -43,6 +57,8 @@ export class MediaController {
    * directly, then confirms. Bytes never pass through the API process.
    */
   @Post('uploads')
+  @RequireRbac('twilite.media.upload')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({ summary: 'Получить ссылку для загрузки файла' })
   @ApiOkResponse({ type: UploadTicketResponseDto })
   async createUpload(
@@ -59,12 +75,14 @@ export class MediaController {
   }
 
   @Post('uploads/:assetId/confirm')
+  @RequireRbac('twilite.media.confirm')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOperation({ summary: 'Подтвердить успешную загрузку' })
   @ApiOkResponse({ type: MediaAssetResponseDto })
   async confirm(
     @CurrentUser() user: AuthenticatedUser,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
-    @Param('assetId') assetId: string,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
   ): Promise<MediaAssetDto> {
     return this.idempotency.execute({
       key: idempotencyKey,
@@ -82,17 +100,23 @@ export class MediaController {
       await this.entitlements.assertGranted(userId, 'canUploadVoice');
     }
 
-    if (body.kind === 'pixel-sheet' && body.contentType !== 'image/png') {
-      throw new ValidationError('Spritesheet должен быть PNG', [
-        { path: 'contentType', message: 'Ожидается image/png' },
-      ]);
-    }
+    assertMediaUploadPolicy({
+      kind: body.kind,
+      contentType: body.contentType,
+      byteSize: body.byteSize,
+      limits: this.limits,
+    });
 
     if (!this.storage.enabled) {
       throw new InfrastructureError('Загрузка файлов недоступна: хранилище не настроено');
     }
 
-    const storageKey = `${userId}/${body.kind}/${randomUUID()}`;
+    const used = await countUploadsToday(this.db, userId);
+    if (used >= this.limits.media.uploadsPerUserPerDay) {
+      throw mediaQuotaExceededError(this.limits.media.uploadsPerUserPerDay);
+    }
+
+    const storageKey = buildOpaqueStorageKey(body.kind);
 
     const [asset] = await this.db
       .insert(mediaAssets)

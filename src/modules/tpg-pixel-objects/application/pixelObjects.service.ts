@@ -14,6 +14,7 @@ import type {
   PixelObjectMobileDto,
   SubmitPixelObjectDto,
 } from '@/shared/contracts/pixelObjects.contract';
+import { AuditLogService } from '@/shared/audit/auditLog.service';
 import {
   AuthorizationError,
   ConflictError,
@@ -27,6 +28,7 @@ import {
 } from '@/shared/events/domainEvents';
 import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 
+import { assertNotSelfModeration } from './assertNotSelfModeration';
 import { assertPixelObjectSheet } from './assertPixelObjectSheet';
 import {
   decodeCatalogCursor,
@@ -56,6 +58,7 @@ export class PixelObjectsService {
     private readonly logger: Logger,
     private readonly events: EventEmitter2,
     private readonly idempotency: IdempotencyService,
+    private readonly audit: AuditLogService,
   ) {}
 
   getLimits(): PixelObjectLimits {
@@ -280,9 +283,15 @@ export class PixelObjectsService {
   }
 
   async publish(reviewerUserId: string, id: string): Promise<PixelObjectDto> {
+    let revisionNumber = 0;
     await this.db.transaction(async (tx) => {
       const head = await this.lockHead(tx, id);
+      assertNotSelfModeration({
+        authorUserId: head.authorUserId,
+        reviewerUserId,
+      });
       const pending = await this.requirePendingRevision(tx, head);
+      revisionNumber = pending.revisionNumber;
       await tx
         .update(pixelObjectRevisions)
         .set({
@@ -310,6 +319,13 @@ export class PixelObjectsService {
         })
         .where(eq(pixelObjects.id, id));
     });
+    await this.audit.write({
+      actorUserId: reviewerUserId,
+      action: 'pixel_object.publish',
+      resource: 'pixel_object',
+      resourceId: id,
+      context: { revision: revisionNumber, decision: 'publish' },
+    });
     const published = await this.getPublished(id);
     this.events.emit(domainEventNames.pixelObjectPublished, {
       pixelObjectId: published.id,
@@ -327,9 +343,15 @@ export class PixelObjectsService {
   }
 
   async reject(reviewerUserId: string, id: string, comment: string): Promise<PixelObjectDto> {
+    let revisionNumber = 0;
     await this.db.transaction(async (tx) => {
       const head = await this.lockHead(tx, id);
+      assertNotSelfModeration({
+        authorUserId: head.authorUserId,
+        reviewerUserId,
+      });
       const pending = await this.requirePendingRevision(tx, head);
+      revisionNumber = pending.revisionNumber;
       await tx
         .update(pixelObjectRevisions)
         .set({
@@ -351,6 +373,13 @@ export class PixelObjectsService {
           updatedAt: new Date(),
         })
         .where(eq(pixelObjects.id, id));
+    });
+    await this.audit.write({
+      actorUserId: reviewerUserId,
+      action: 'pixel_object.reject',
+      resource: 'pixel_object',
+      resourceId: id,
+      context: { revision: revisionNumber, decision: 'reject' },
     });
     if ((await this.findPublishedDto(id)) !== null) {
       return (await this.findPublishedDto(id))!;
