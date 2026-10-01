@@ -2,6 +2,7 @@
 -- Rollback: drop FKs on pixel_objects revision pointers, DROP TABLE pixel_object_revisions,
 -- DROP columns published_revision_id / pending_revision_id. Head columns remain authoritative until P2-S2.
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;--> statement-breakpoint
 CREATE TABLE "pixel_object_revisions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"pixel_object_id" uuid NOT NULL,
@@ -50,7 +51,14 @@ SELECT
 	po."manifest",
 	po."sheet_media_id",
 	NULL,
-	encode(sha256(convert_to(po."manifest"::text || chr(0) || po."sheet_media_id"::text, 'UTF8')), 'hex'),
+	encode(
+		sha256(
+			convert_to(po."manifest"::text, 'UTF8')
+			|| '\x00'::bytea
+			|| convert_to(po."sheet_media_id"::text, 'UTF8')
+		),
+		'hex'
+	),
 	po."status",
 	po."rejection_comment",
 	po."reviewed_by_user_id",
