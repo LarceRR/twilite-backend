@@ -169,7 +169,7 @@ export class PixelObjectsController {
   @Post('admin/media-gc')
   @RequireRbac('tpg.pixelObjects.moderate')
   @ApiOperation({ summary: 'GC неподтверждённых uploads и orphan pixel-sheets (dry-run по умолчанию)' })
-  async mediaGc(@Query('dryRun') dryRun = 'true') {
+  async runMediaGc(@Query('dryRun') dryRun = 'true') {
     return this.mediaGc.run({ dryRun: dryRun !== 'false' });
   }
 }

@@ -10,7 +10,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { Logger } from 'nestjs-pino';
 import { ZodValidationException } from 'nestjs-zod';
 import { reportError } from '@/infrastructure/sentry/sentry';
-import type { ErrorResponse } from '@/shared/contracts/common.contract';
+import type { ErrorResponse } from '@twilite/contracts';
 import {
   AppError,
   ErrorCode,

@@ -14,7 +14,7 @@
  */
 import { describe, it } from 'vitest';
 
-const run = process.env.RUN_INTEGRATION === '1';
+const run = process.env['RUN_INTEGRATION'] === '1';
 
 describe.skipIf(!run)('sprite pipeline e2e (P5-S1)', () => {
   it('upload → confirm → submit → publish → place → snapshot', async () => {

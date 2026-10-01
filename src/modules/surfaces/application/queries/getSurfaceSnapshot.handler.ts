@@ -54,8 +54,8 @@ export class GetSurfaceSnapshotHandler {
             const dto = toSurfaceObjectDto(object);
             const pixelObjectId =
               object.pixelObjectId ??
-              (typeof object.metadata.pixelObjectId === 'string'
-                ? object.metadata.pixelObjectId
+              (typeof object.metadata['pixelObjectId'] === 'string'
+                ? object.metadata['pixelObjectId']
                 : null);
             const pixelObject =
               pixelObjectId === null ? null : (embeds.get(pixelObjectId) ?? null);

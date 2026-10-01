@@ -20,6 +20,7 @@ import {
   type StoragePort,
 } from '@/infrastructure/storage/StoragePort';
 import { EntitlementsService } from '@/modules/billing/application/services/entitlements.service';
+import type { UserId } from '@/modules/users/domain/value-objects/UserId';
 import type { MediaAssetDto, UploadTicketDto } from '@/shared/contracts/media.contract';
 import {
   createUploadRequestSchema,
@@ -93,7 +94,7 @@ export class MediaController {
   }
 
   private async createUploadOnce(
-    userId: string,
+    userId: UserId,
     body: CreateUploadDto,
   ): Promise<UploadTicketDto> {
     if (body.kind === 'voice') {
