@@ -6,6 +6,7 @@ export * from './idempotency';
 export * from './media';
 export * from './notifications';
 export * from './pixelObjects';
+export * from './pixelObjectRevisions';
 export * from './rbac';
 export * from './sessions';
 export * from './spaces';

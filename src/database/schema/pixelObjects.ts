@@ -17,6 +17,7 @@ export const pixelObjects = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
+    /** Dual-write head fields until P2-S2 cuts over reads to revisions. */
     manifest: jsonb('manifest').notNull(),
     sheetMediaId: uuid('sheet_media_id')
       .notNull()
@@ -28,6 +29,10 @@ export const pixelObjects = pgTable(
       onDelete: 'set null',
     }),
     reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    /** Live published revision pointer (ADR-003). FK added in migration 0008. */
+    publishedRevisionId: uuid('published_revision_id'),
+    /** Current pending/rejected revision under review. FK added in migration 0008. */
+    pendingRevisionId: uuid('pending_revision_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

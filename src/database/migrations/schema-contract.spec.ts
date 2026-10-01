@@ -53,4 +53,12 @@ describe('контракт схемы соответствует миграци�
 
     expect(new Set(names).size).toBe(names.length);
   });
+
+  it('миграция 0008 бэкфиллит ревизии и указатели head', () => {
+    expect(sql).toContain('INSERT INTO "pixel_object_revisions"');
+    expect(sql).toContain('SET "published_revision_id" = r."id"');
+    expect(sql).toContain('SET "pending_revision_id" = r."id"');
+    expect(sql).toContain('po."status" = \'published\'');
+    expect(sql).toContain("po.\"status\" IN ('pending', 'rejected')");
+  });
 });
