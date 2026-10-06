@@ -4,7 +4,14 @@ import { isoDateTime, uuidSchema } from './common';
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
-export const mediaKindSchema = z.enum(['image', 'voice', 'attachment', 'avatar', 'pixel-sheet']);
+export const mediaKindSchema = z.enum([
+  'image',
+  'voice',
+  'attachment',
+  'avatar',
+  'project-avatar',
+  'pixel-sheet',
+]);
 
 export const mediaAssetStatusSchema = z.enum(['pending', 'ready', 'rejected']);
 

@@ -1,6 +1,6 @@
 import type { AppLimits } from '@/config/limits';
 
-export type MediaKind = 'image' | 'voice' | 'attachment' | 'avatar' | 'pixel-sheet';
+export type MediaKind = 'image' | 'voice' | 'attachment' | 'avatar' | 'project-avatar' | 'pixel-sheet';
 
 export type MediaKindPolicy = {
   readonly kind: MediaKind;
@@ -40,6 +40,13 @@ export const MEDIA_KIND_POLICIES: Readonly<Record<MediaKind, MediaKindPolicy>> =
   },
   avatar: {
     kind: 'avatar',
+    contentTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    maxBytes: (limits) => limits.media.avatarMaxBytes,
+    privacy: 'public',
+    pendingRetentionHours: 24,
+  },
+  'project-avatar': {
+    kind: 'project-avatar',
     contentTypes: ['image/jpeg', 'image/png', 'image/webp'],
     maxBytes: (limits) => limits.media.avatarMaxBytes,
     privacy: 'public',

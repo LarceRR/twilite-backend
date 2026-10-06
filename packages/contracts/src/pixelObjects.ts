@@ -17,7 +17,14 @@ export const pixelObjectStatusSchema = z.enum(['pending', 'published', 'rejected
 export const submitPixelObjectSchema = z
   .object({
     title: z.string().trim().min(1).max(80),
+    projectId: uuidSchema,
     manifest: pixelObjectManifestSchema,
+  })
+  .strict();
+
+export const reassignPixelObjectSchema = z
+  .object({
+    toProjectId: uuidSchema,
   })
   .strict();
 
@@ -31,6 +38,7 @@ const canvasSizeSchema = z.number().int().min(1).max(PIXEL_OBJECT_CANVAS_MAX);
 
 export const pixelObjectCatalogItemSchema = z.object({
   id: uuidSchema,
+  projectId: uuidSchema,
   title: z.string(),
   status: pixelObjectStatusSchema.optional(),
   revision: z.number().int().min(1),
@@ -44,6 +52,7 @@ export const pixelObjectCatalogItemSchema = z.object({
 /** Full author/moderation DTO (includes author fields). */
 export const pixelObjectDtoSchema = z.object({
   id: uuidSchema,
+  projectId: uuidSchema,
   title: z.string(),
   authorDisplayName: z.string(),
   authorUserId: uuidSchema,
@@ -96,6 +105,7 @@ export const pixelObjectMobileSchema = z
   .strict();
 
 export type SubmitPixelObjectDto = z.infer<typeof submitPixelObjectSchema>;
+export type ReassignPixelObjectDto = z.infer<typeof reassignPixelObjectSchema>;
 export type PixelObjectDto = z.infer<typeof pixelObjectDtoSchema>;
 export type PixelObjectCatalogItem = z.infer<typeof pixelObjectCatalogItemSchema>;
 export type PixelObjectMobileDto = z.infer<typeof pixelObjectMobileSchema>;

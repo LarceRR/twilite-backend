@@ -13,11 +13,13 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { pixelObjectLimitsSchema } from '@twilite/contracts';
 import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 
 import {
   pixelObjectDtoSchema,
   pixelObjectListSchema,
   pixelObjectMobileSchema,
+  reassignPixelObjectSchema,
   rejectPixelObjectSchema,
   submitPixelObjectSchema,
 } from '@/shared/contracts/pixelObjects.contract';
@@ -29,12 +31,18 @@ import { MediaGcService } from '../../application/mediaGc.service';
 import { PixelObjectsService } from '../../application/pixelObjects.service';
 
 class SubmitPixelObjectDtoClass extends createZodDto(submitPixelObjectSchema) {}
+class ReassignPixelObjectDtoClass extends createZodDto(reassignPixelObjectSchema) {}
 class RejectPixelObjectDtoClass extends createZodDto(rejectPixelObjectSchema) {}
 class PixelObjectDtoClass extends createZodDto(pixelObjectDtoSchema) {}
 class PixelObjectListDtoClass extends createZodDto(pixelObjectListSchema) {}
 class PixelObjectMobileDtoClass extends createZodDto(pixelObjectMobileSchema) {}
 class PixelObjectLimitsDtoClass extends createZodDto(pixelObjectLimitsSchema) {}
+
+const mineListQuerySchema = catalogListQuerySchema.extend({
+  projectId: z.string().uuid().optional(),
+});
 class CatalogListQueryDtoClass extends createZodDto(catalogListQuerySchema) {}
+class MineListQueryDtoClass extends createZodDto(mineListQuerySchema) {}
 
 @ApiTags('pixel-objects')
 @Controller('tpg/pixel-objects')
@@ -68,8 +76,8 @@ export class PixelObjectsController {
   @RequireAnyRbac('tpg.pixelObjects.submit', 'tpg.pixelObjects.create')
   @ApiOperation({ summary: 'Отправки текущего автора' })
   @ApiOkResponse({ type: PixelObjectListDtoClass })
-  async mine(@CurrentUser() user: AuthenticatedUser, @Query() query: CatalogListQueryDtoClass) {
-    return this.objects.listMine(user.userId, catalogListQuerySchema.parse(query));
+  async mine(@CurrentUser() user: AuthenticatedUser, @Query() query: MineListQueryDtoClass) {
+    return this.objects.listMine(user.userId, mineListQuerySchema.parse(query));
   }
 
   @Get('moderation')
@@ -121,6 +129,19 @@ export class PixelObjectsController {
     @Body() body: SubmitPixelObjectDtoClass,
   ) {
     return this.objects.resubmit(user.userId, id, body, idempotencyKey ?? null);
+  }
+
+  @Post(':id/reassign')
+  @RequireAnyRbac('tpg.pixelObjects.submit', 'tpg.pixelObjects.create')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Перенести объект в другой проект' })
+  @ApiOkResponse({ type: PixelObjectDtoClass })
+  async reassign(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: ReassignPixelObjectDtoClass,
+  ) {
+    return this.objects.reassign(user.userId, id, body);
   }
 
   @Post(':id/archive')

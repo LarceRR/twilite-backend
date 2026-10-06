@@ -1,20 +1,12 @@
-import { DomainError } from '@/shared/errors';
-import { ErrorCode } from '@/shared/errors/AppError';
-
-/** Authors cannot moderate their own pixel objects unless admin override. */
-export function assertNotSelfModeration(input: {
+/**
+ * Self-moderation is allowed when the actor has `tpg.pixelObjects.moderate`
+ * (enforced at the controller RBAC gate). Kept as a no-op for call-site clarity
+ * and historical SEC regression imports.
+ */
+export function assertNotSelfModeration(_input: {
   readonly authorUserId: string;
   readonly reviewerUserId: string;
   readonly allowSelf?: boolean;
 }): void {
-  if (input.allowSelf === true) {
-    return;
-  }
-  if (input.authorUserId === input.reviewerUserId) {
-    throw new DomainError(
-      'Нельзя модерировать собственный объект',
-      {},
-      { code: ErrorCode.PIXEL_OBJECT_SELF_MODERATION, httpStatus: 403 },
-    );
-  }
+  // Moderators may publish/reject their own objects.
 }

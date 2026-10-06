@@ -7,6 +7,7 @@ export * from './media';
 export * from './notifications';
 export * from './pixelObjectRevisions';
 export * from './pixelObjects';
+export * from './tpgProjects';
 export * from './rbac';
 export * from './sessions';
 export * from './spaces';

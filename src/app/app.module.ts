@@ -26,6 +26,7 @@ import { SurfacesModule } from '@/modules/surfaces/surfaces.module';
 import { TimelineModule } from '@/modules/timeline/timeline.module';
 import { TpgModule } from '@/modules/tpg/tpg.module';
 import { PixelObjectsModule } from '@/modules/tpg-pixel-objects/pixelObjects.module';
+import { ProjectsModule } from '@/modules/tpg-projects/projects.module';
 import { UsersModule } from '@/modules/users/users.module';
 import { AppExceptionFilter } from '@/shared/filters/appException.filter';
 import { JwtAuthGuard } from '@/shared/guards/jwtAuth.guard';
@@ -68,6 +69,7 @@ import { RuntimeModule } from '@/shared/runtime.module';
     AnalyticsModule,
     TpgModule,
     AppThemesModule,
+    ProjectsModule,
     PixelObjectsModule,
   ],
   controllers: [HealthController],

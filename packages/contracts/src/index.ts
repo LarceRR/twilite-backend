@@ -4,5 +4,6 @@ export * from './limits';
 export * from './tpo';
 export * from './media';
 export * from './pixelObjects';
+export * from './projects';
 export * from './surface';
 export * from './events';

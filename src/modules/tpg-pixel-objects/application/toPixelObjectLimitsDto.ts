@@ -16,6 +16,9 @@ export function toPixelObjectLimitsDto(limits: AppLimits): PixelObjectLimits {
     maxFrameDurationMs: PIXEL_OBJECT_MAX_FRAME_DURATION_MS,
     titleMax: DEFAULT_PIXEL_OBJECT_LIMITS.titleMax,
     surfaceMax: limits.moments.objectsPerSurface,
+    objectsPerProject: limits.tpg.objectsPerProject,
+    projectsPerUser: limits.tpg.projectsPerUser,
+    projectTitleMax: limits.tpg.projectTitleMaxLength,
     supportedFormat: DEFAULT_PIXEL_OBJECT_LIMITS.supportedFormat,
   };
 }

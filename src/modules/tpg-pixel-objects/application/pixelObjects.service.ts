@@ -8,11 +8,13 @@ import { type AppLimits, LIMITS } from '@/config/limits';
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets, pixelObjectRevisions, pixelObjects } from '@/database/schema';
 import { STORAGE, type StoragePort } from '@/infrastructure/storage/StoragePort';
+import { ProjectsService } from '@/modules/tpg-projects/application/projects.service';
 import { AuditLogService } from '@/shared/audit/auditLog.service';
 import type {
   PixelObjectDto,
   PixelObjectManifest,
   PixelObjectMobileDto,
+  ReassignPixelObjectDto,
   SubmitPixelObjectDto,
 } from '@/shared/contracts/pixelObjects.contract';
 import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from '@/shared/errors';
@@ -23,7 +25,6 @@ import {
 } from '@/shared/events/domainEvents';
 import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 
-import { assertNotSelfModeration } from './assertNotSelfModeration';
 import { assertPixelObjectSheet } from './assertPixelObjectSheet';
 import { type CatalogListQuery, decodeCatalogCursor, encodeCatalogCursor } from './catalogCursor';
 import { createPreviewMedia } from './createPreviewMedia';
@@ -46,6 +47,7 @@ export class PixelObjectsService {
     @Inject(DATABASE) private readonly db: Database,
     @Inject(STORAGE) private readonly storage: StoragePort,
     @Inject(LIMITS) private readonly limits: AppLimits,
+    private readonly projects: ProjectsService,
     private readonly logger: Logger,
     private readonly events: EventEmitter2,
     private readonly idempotency: IdempotencyService,
@@ -92,9 +94,13 @@ export class PixelObjectsService {
 
   async listMine(
     authorUserId: string,
-    query: CatalogListQuery = { limit: 20 },
+    query: CatalogListQuery & { readonly projectId?: string | undefined } = { limit: 20 },
   ): Promise<{ items: PixelObjectDto[]; nextCursor: string | null }> {
-    return this.listAuthorPage(eq(pixelObjects.authorUserId, authorUserId), query);
+    const filters = [eq(pixelObjects.authorUserId, authorUserId)];
+    if (query.projectId !== undefined) {
+      filters.push(eq(pixelObjects.projectId, query.projectId));
+    }
+    return this.listAuthorPage(and(...filters)!, query);
   }
 
   async listPending(
@@ -179,6 +185,7 @@ export class PixelObjectsService {
     authorUserId: string,
     input: SubmitPixelObjectDto,
   ): Promise<PixelObjectDto> {
+    await this.projects.assertWritableProject(authorUserId, input.projectId);
     const sheetPng = await this.assertSheetOwned(authorUserId, input.manifest);
     const objectId = await this.db.transaction(async (tx) => {
       const previewMediaId = await createPreviewMedia({
@@ -191,6 +198,7 @@ export class PixelObjectsService {
       const [head] = await tx
         .insert(pixelObjects)
         .values({
+          projectId: input.projectId,
           authorUserId,
           title: input.title,
           manifest: input.manifest,
@@ -218,6 +226,11 @@ export class PixelObjectsService {
     input: SubmitPixelObjectDto,
   ): Promise<PixelObjectDto> {
     const existing = await this.requireOwned(id, authorUserId);
+    if (existing.projectId !== input.projectId) {
+      throw new ValidationError('Нельзя сменить проект при повторной отправке', [
+        { path: 'projectId', message: 'Должен совпадать с текущим проектом объекта' },
+      ]);
+    }
     await this.assertNoActivePending(existing);
     const sheetPng = await this.assertSheetOwned(authorUserId, input.manifest);
 
@@ -274,14 +287,32 @@ export class PixelObjectsService {
     return this.requireAuthorDto(id);
   }
 
+  async reassign(
+    actorUserId: string,
+    id: string,
+    input: ReassignPixelObjectDto,
+  ): Promise<PixelObjectDto> {
+    const existing = await this.requireOwned(id, actorUserId);
+    if (existing.projectId === input.toProjectId) {
+      return this.requireAuthorDto(id);
+    }
+    const target = await this.projects.requireProjectRow(input.toProjectId);
+    await this.projects.assertWritableProject(target.ownerId, input.toProjectId);
+    await this.db
+      .update(pixelObjects)
+      .set({
+        projectId: input.toProjectId,
+        authorUserId: target.ownerId,
+        updatedAt: new Date(),
+      })
+      .where(eq(pixelObjects.id, id));
+    return this.requireAuthorDto(id);
+  }
+
   async publish(reviewerUserId: string, id: string): Promise<PixelObjectDto> {
     let revisionNumber = 0;
     await this.db.transaction(async (tx) => {
       const head = await this.lockHead(tx, id);
-      assertNotSelfModeration({
-        authorUserId: head.authorUserId,
-        reviewerUserId,
-      });
       const pending = await this.requirePendingRevision(tx, head);
       revisionNumber = pending.revisionNumber;
       await tx
@@ -338,10 +369,6 @@ export class PixelObjectsService {
     let revisionNumber = 0;
     await this.db.transaction(async (tx) => {
       const head = await this.lockHead(tx, id);
-      assertNotSelfModeration({
-        authorUserId: head.authorUserId,
-        reviewerUserId,
-      });
       const pending = await this.requirePendingRevision(tx, head);
       revisionNumber = pending.revisionNumber;
       await tx

@@ -17,10 +17,8 @@ describe('P5-S2 security regression', () => {
     expect(error.httpStatus).toBe(429);
   });
 
-  it('SEC self-moderation: author cannot review own object', () => {
-    expect(() => assertNotSelfModeration({ authorUserId: 'a', reviewerUserId: 'a' })).toThrow(
-      DomainError,
-    );
+  it('SEC self-moderation: moderators may review own object (RBAC is the gate)', () => {
+    expect(() => assertNotSelfModeration({ authorUserId: 'a', reviewerUserId: 'a' })).not.toThrow();
   });
 
   it('SEC opaque keys: storage key does not embed user id path segment', () => {

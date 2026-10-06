@@ -1,6 +1,7 @@
 import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { mediaAssets } from './media';
+import { tpgProjects } from './tpgProjects';
 import { users } from './users';
 
 export const pixelObjectStatusEnum = pgEnum('pixel_object_status', [
@@ -14,6 +15,9 @@ export const pixelObjects = pgTable(
   'pixel_objects',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => tpgProjects.id, { onDelete: 'restrict' }),
     authorUserId: uuid('author_user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -40,5 +44,6 @@ export const pixelObjects = pgTable(
   (table) => [
     index('pixel_objects_status_created_idx').on(table.status, table.createdAt),
     index('pixel_objects_author_idx').on(table.authorUserId, table.updatedAt),
+    index('pixel_objects_project_created_idx').on(table.projectId, table.createdAt),
   ],
 );

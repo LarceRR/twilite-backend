@@ -71,6 +71,20 @@
       "when": 1791400000000,
       "tag": "0009_pixel_archive_and_surface_binding",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791500000000,
+      "tag": "0010_tpg_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791600000000,
+      "tag": "0011_tpg_project_description",
+      "breakpoints": true
     }
   ]
 }

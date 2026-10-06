@@ -15,6 +15,8 @@ export {
   pixelObjectManifestSchema,
   pixelObjectMobileSchema,
   pixelObjectStatusSchema,
+  type ReassignPixelObjectDto,
+  reassignPixelObjectSchema,
   rejectPixelObjectSchema,
   type SubmitPixelObjectDto,
   submitPixelObjectSchema,

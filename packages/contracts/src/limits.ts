@@ -10,6 +10,9 @@ export const pixelObjectLimitsSchema = z
     maxFrameDurationMs: z.number().int().min(1),
     titleMax: z.number().int().min(1),
     surfaceMax: z.number().int().min(1),
+    objectsPerProject: z.number().int().min(1),
+    projectsPerUser: z.number().int().min(1),
+    projectTitleMax: z.number().int().min(1),
     supportedFormat: z.literal('twilite.pixelobject/v1'),
   })
   .strict();
@@ -24,5 +27,8 @@ export const DEFAULT_PIXEL_OBJECT_LIMITS = {
   maxFrameDurationMs: 10_000,
   titleMax: 80,
   surfaceMax: 500,
+  objectsPerProject: 100,
+  projectsPerUser: 50,
+  projectTitleMax: 80,
   supportedFormat: 'twilite.pixelobject/v1',
 } as const satisfies PixelObjectLimits;
