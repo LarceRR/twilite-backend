@@ -443,7 +443,7 @@ export const LIMIT_DEFINITIONS: readonly LimitDefinition[] = [
     description: 'Суточный бюджет на AI; при исчерпании вызовы провайдера не выполняются',
   },
 
-  // TPG — The Pixelart Generator (без персистенции)
+  // TPG — The Pixelart Generator
   {
     key: 'LIMIT_TPG_IMAGE_MAX_BYTES',
     path: 'tpg.imageMaxBytes',
@@ -473,6 +473,36 @@ export const LIMIT_DEFINITIONS: readonly LimitDefinition[] = [
     max: 26214400,
     owner: 'tpg',
     description: 'Размер PNG spritesheet pixel object',
+  },
+  {
+    key: 'LIMIT_TPG_OBJECTS_PER_PROJECT',
+    path: 'tpg.objectsPerProject',
+    unit: 'items',
+    production: 100,
+    min: 1,
+    max: 500,
+    owner: 'tpg-projects',
+    description: 'Пиксельных объектов в одном TPG-проекте',
+  },
+  {
+    key: 'LIMIT_TPG_PROJECTS_PER_USER',
+    path: 'tpg.projectsPerUser',
+    unit: 'items',
+    production: 50,
+    min: 1,
+    max: 200,
+    owner: 'tpg-projects',
+    description: 'TPG-проекты, которыми пользователь владеет',
+  },
+  {
+    key: 'LIMIT_TPG_PROJECT_TITLE_MAX_LENGTH',
+    path: 'tpg.projectTitleMaxLength',
+    unit: 'characters',
+    production: 80,
+    min: 8,
+    max: 200,
+    owner: 'tpg-projects',
+    description: 'Максимальная длина названия TPG-проекта',
   },
 
   // Приватность и поддержка
@@ -576,6 +606,9 @@ export type AppLimits = {
     readonly imageMaxBytes: number;
     readonly pixelObjectMaxFrames: number;
     readonly pixelObjectSheetMaxBytes: number;
+    readonly objectsPerProject: number;
+    readonly projectsPerUser: number;
+    readonly projectTitleMaxLength: number;
   };
   readonly privacy: {
     readonly supportMessageMaxLength: number;
@@ -695,6 +728,9 @@ export function loadLimits(source: NodeJS.ProcessEnv = process.env): AppLimits {
       imageMaxBytes: at('LIMIT_TPG_IMAGE_MAX_BYTES'),
       pixelObjectMaxFrames: at('LIMIT_TPG_PIXEL_OBJECT_MAX_FRAMES'),
       pixelObjectSheetMaxBytes: at('LIMIT_TPG_PIXEL_OBJECT_SHEET_MAX_BYTES'),
+      objectsPerProject: at('LIMIT_TPG_OBJECTS_PER_PROJECT'),
+      projectsPerUser: at('LIMIT_TPG_PROJECTS_PER_USER'),
+      projectTitleMaxLength: at('LIMIT_TPG_PROJECT_TITLE_MAX_LENGTH'),
     },
     privacy: {
       supportMessageMaxLength: at('LIMIT_SUPPORT_MESSAGE_MAX_LENGTH'),

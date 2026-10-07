@@ -1,4 +1,4 @@
-import { isOpaqueEnough, type Rgb } from './rawRgba';
+import { isOpaqueEnough, type Rgb, sampleAt } from './rawRgba';
 
 /** Heckbert median-cut over opaque pixels only — ignores transparent background. */
 export function buildMedianCutPalette(data: Uint8ClampedArray, colorCount: number): Rgb[] {
@@ -10,7 +10,9 @@ export function buildMedianCutPalette(data: Uint8ClampedArray, colorCount: numbe
   while (buckets.length < colorCount) {
     const index = findWidestBucket(buckets);
     if (index < 0) break;
-    const [left, right] = splitBucket(buckets[index]!);
+    const bucket = buckets[index];
+    if (bucket === undefined) break;
+    const [left, right] = splitBucket(bucket);
     buckets = [...buckets.slice(0, index), left, right, ...buckets.slice(index + 1)];
   }
 
@@ -20,8 +22,8 @@ export function buildMedianCutPalette(data: Uint8ClampedArray, colorCount: numbe
 function collectOpaquePixels(data: Uint8ClampedArray): Rgb[] {
   const pixels: Rgb[] = [];
   for (let i = 0; i < data.length; i += 4) {
-    if (!isOpaqueEnough(data[i + 3]!)) continue;
-    pixels.push([data[i]!, data[i + 1]!, data[i + 2]!]);
+    if (!isOpaqueEnough(sampleAt(data, i + 3))) continue;
+    pixels.push([sampleAt(data, i), sampleAt(data, i + 1), sampleAt(data, i + 2)]);
   }
   return pixels;
 }
@@ -31,8 +33,10 @@ function findWidestBucket(buckets: Rgb[][]): number {
   let bestRange = -1;
 
   for (let i = 0; i < buckets.length; i += 1) {
-    const range = channelRange(buckets[i]!).span;
-    if (range > bestRange && buckets[i]!.length > 1) {
+    const bucket = buckets[i];
+    if (bucket === undefined) continue;
+    const range = channelRange(bucket).span;
+    if (range > bestRange && bucket.length > 1) {
       bestRange = range;
       best = i;
     }
@@ -64,7 +68,7 @@ function channelRange(pixels: Rgb[]): { channel: 0 | 1 | 2; span: number } {
     { channel: 2, span: maxB - minB },
   ];
 
-  return ranges.sort((a, b) => b.span - a.span)[0]!;
+  return ranges.reduce((widest, next) => (next.span > widest.span ? next : widest));
 }
 
 function splitBucket(pixels: Rgb[]): [Rgb[], Rgb[]] {

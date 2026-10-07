@@ -2,9 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppLimits } from '@/config/limits';
 import { ValidationError } from '@/shared/errors';
-
-import { GeneratePixelArtHandler } from './generatePixelArt.handler';
 import type { PixelArtProcessor } from '../../domain/ports/PixelArtProcessor';
+import { GeneratePixelArtHandler } from './generatePixelArt.handler';
 
 const limits = {
   tpg: { imageMaxBytes: 1024 },

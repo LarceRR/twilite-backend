@@ -25,3 +25,8 @@ export function createRawRgba(
 export function isOpaqueEnough(alpha: number): boolean {
   return alpha >= ALPHA_CUTOFF;
 }
+
+/** Indexed read under `noUncheckedIndexedAccess` — out-of-range yields 0. */
+export function sampleAt(data: ArrayLike<number>, index: number): number {
+  return data[index] ?? 0;
+}

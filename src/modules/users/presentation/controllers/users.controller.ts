@@ -1,5 +1,19 @@
-import { Body, Controller, Get, Inject, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import type { FastifyReply } from 'fastify';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
@@ -74,11 +88,26 @@ export class UsersController {
     return toProfileDto(updated, extras);
   }
 
+  @Get(':id/avatar')
+  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Аватар пользователя через API' })
+  async avatar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<StreamableFile> {
+    const file = await this.avatars.read(id);
+    reply.header('Cache-Control', 'private, max-age=300');
+    return new StreamableFile(file.body, {
+      type: file.contentType,
+      length: file.body.length,
+    });
+  }
+
   @Post('me/avatar')
   @ApiOperation({
-    summary: 'Получить ссылку для загрузки аватара',
+    summary: 'Создать загрузку аватара',
     description:
-      'Клиент загружает байты напрямую в R2 по uploadUrl, затем вызывает POST /users/me/avatar/:assetId/confirm.',
+      'Клиент отправляет байты PUT на uploadUrl этого API, затем вызывает POST /users/me/avatar/:assetId/confirm.',
   })
   @ApiOkResponse({ type: UploadTicketResponseDto })
   async createAvatarUpload(

@@ -17,6 +17,13 @@
       "breakpoints": true
     },
     {
+      "idx": 2,
+      "version": "7",
+      "when": 1787000000000,
+      "tag": "0002_idempotency_reservations",
+      "breakpoints": true
+    },
+    {
       "idx": 3,
       "version": "7",
       "when": 1787952000000,
@@ -49,6 +56,55 @@
       "version": "7",
       "when": 1791200000000,
       "tag": "0007_pixel_objects",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791300000000,
+      "tag": "0008_pixel_object_revisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791400000000,
+      "tag": "0009_pixel_archive_and_surface_binding",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791500000000,
+      "tag": "0010_tpg_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791600000000,
+      "tag": "0011_tpg_project_description",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791700000000,
+      "tag": "0012_reassignment_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791800000000,
+      "tag": "0013_pixel_object_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791900000000,
+      "tag": "0014_pixel_object_catalog_type_idx",
       "breakpoints": true
     }
   ]

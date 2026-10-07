@@ -40,9 +40,7 @@ const cssColorSchema = z
   .trim()
   .min(1)
   .refine(
-    (value) =>
-      /^#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(value) ||
-      /^rgba?\(/.test(value),
+    (value) => /^#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(value) || /^rgba?\(/.test(value),
     'Invalid CSS color',
   );
 
@@ -57,10 +55,7 @@ const themeColorsShape = Object.fromEntries(
 
 export const themeColorsSchema = z.object(themeColorsShape).strict();
 
-export const sceneBackgroundColorsSchema = z
-  .array(opaqueHexSchema)
-  .min(2)
-  .max(5);
+export const sceneBackgroundColorsSchema = z.array(opaqueHexSchema).min(2).max(5);
 
 export const appThemeStatusSchema = z.enum(['pending', 'published', 'rejected']);
 

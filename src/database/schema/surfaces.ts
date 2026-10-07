@@ -9,7 +9,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-
+import { pixelObjects } from './pixelObjects';
 import { spaces } from './spaces';
 import { users } from './users';
 
@@ -51,6 +51,10 @@ export const surfaceObjects = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     metadata: jsonb('metadata').notNull().default({}),
     favorite: boolean('favorite').notNull().default(false),
+    /** First-class pixel binding (ADR-004). Dual-read with metadata.pixelObjectId. */
+    pixelObjectId: uuid('pixel_object_id').references(() => pixelObjects.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     version: integer('version').notNull().default(1),
@@ -63,5 +67,6 @@ export const surfaceObjects = pgTable(
     index('surface_objects_space_idx').on(table.spaceId),
     // Drives the scheduled Fading -> Settled sweep.
     index('surface_objects_state_updated_idx').on(table.state, table.updatedAt),
+    index('surface_objects_pixel_object_idx').on(table.pixelObjectId),
   ],
 );

@@ -1,12 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
-
-import {
-  type AuthenticatedUser,
-  CurrentUser,
-} from '@/shared/decorators/auth.decorators';
-import { RequireRbac } from '@/shared/decorators/rbac.decorators';
 import {
   appThemeDtoSchema,
   appThemeListSchema,
@@ -16,6 +10,8 @@ import {
   rejectAppThemeSchema,
   submitAppThemeSchema,
 } from '@/shared/contracts/appThemes.contract';
+import { type AuthenticatedUser, CurrentUser } from '@/shared/decorators/auth.decorators';
+import { RequireRbac } from '@/shared/decorators/rbac.decorators';
 
 import { AppThemesService } from '../../application/appThemes.service';
 import { APP_THEME_TOKEN_META } from '../../domain/tokenMeta';

@@ -4,23 +4,32 @@
   "private": true,
   "description": "Twilite API — modular monolith (NestJS + Fastify + Drizzle)",
   "license": "UNLICENSED",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
+    "build:contracts": "npm run build -w @twilite/contracts",
+    "check:contracts": "npm run check:stale -w @twilite/contracts",
+    "prebuild": "npm run build:contracts",
     "build": "nest build",
     "start": "node dist/main.js",
     "dev": "nest start --watch",
+    "pretypecheck": "npm run build:contracts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "biome format --write .",
     "lint:check": "biome check .",
     "lint:fix": "biome check --write .",
-    "test": "vitest run",
+    "pretest": "npm run build:contracts",
+    "test": "vitest run && npm run test -w @twilite/contracts",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/database/migrations/run.ts",
     "db:verify": "tsx src/database/migrations/verify.ts",
     "db:seed": "tsx src/database/seed/seed.ts",
-    "verify": "npm run typecheck && npm run lint && npm run test"
+    "verify": "npm run typecheck && npm run lint:check && npm run check:contracts && npm run test"
   },
   "dependencies": {
+    "@twilite/contracts": "*",
     "@aws-sdk/client-s3": "^3.700.0",
     "@aws-sdk/s3-request-presigner": "^3.700.0",
     "@fastify/cors": "^10.0.1",

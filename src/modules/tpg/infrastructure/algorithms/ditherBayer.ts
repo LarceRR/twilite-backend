@@ -1,6 +1,6 @@
 import { nearestPaletteEntry } from './mapToPalette';
 import { toPaletteEntries } from './oklab';
-import { isOpaqueEnough, type RawRgbaImage, type Rgb } from './rawRgba';
+import { isOpaqueEnough, type RawRgbaImage, type Rgb, sampleAt } from './rawRgba';
 
 /** 8×8 Bayer matrix (values 0–63). */
 const BAYER_8 = [
@@ -24,16 +24,17 @@ export function ditherBayer(image: RawRgbaImage, palette: readonly Rgb[]): void 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const i = (y * width + x) * 4;
-      if (!isOpaqueEnough(data[i + 3]!)) {
+      if (!isOpaqueEnough(sampleAt(data, i + 3))) {
         clearRgb(data, i);
         continue;
       }
 
-      const threshold = (BAYER_8[y & 7]![x & 7]! / 64 - 0.5) * 64;
+      const row = BAYER_8[y & 7];
+      const threshold = ((row?.[x & 7] ?? 0) / 64 - 0.5) * 64;
       const { rgb } = nearestPaletteEntry(
-        clampByte(data[i]! + threshold),
-        clampByte(data[i + 1]! + threshold),
-        clampByte(data[i + 2]! + threshold),
+        clampByte(sampleAt(data, i) + threshold),
+        clampByte(sampleAt(data, i + 1) + threshold),
+        clampByte(sampleAt(data, i + 2) + threshold),
         entries,
       );
       data[i] = rgb[0];

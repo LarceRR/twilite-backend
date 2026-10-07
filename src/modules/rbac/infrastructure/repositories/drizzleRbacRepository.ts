@@ -10,6 +10,7 @@ import {
   userPermissions,
   users,
 } from '@/database/schema';
+import { publicAvatarUrl } from '@/modules/media/domain/mediaApiPath';
 
 import type {
   RbacGroup,
@@ -53,11 +54,7 @@ export class DrizzleRbacRepository implements RbacRepository {
   }
 
   async findDefaultGroup(): Promise<RbacGroup | null> {
-    const [row] = await this.db
-      .select()
-      .from(groups)
-      .where(eq(groups.isDefault, true))
-      .limit(1);
+    const [row] = await this.db.select().from(groups).where(eq(groups.isDefault, true)).limit(1);
     return row === undefined ? null : toGroup(row);
   }
 
@@ -353,6 +350,7 @@ export class DrizzleRbacRepository implements RbacRepository {
         email: users.email,
         displayName: users.displayName,
         avatarUrl: users.avatarUrl,
+        avatarStorageKey: users.avatarStorageKey,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -362,7 +360,7 @@ export class DrizzleRbacRepository implements RbacRepository {
       id: row.id,
       email: row.email,
       displayName: row.displayName,
-      avatarUrl: row.avatarUrl,
+      avatarUrl: publicAvatarUrl(row.id, row.avatarUrl, row.avatarStorageKey),
       createdAt: row.createdAt,
     }));
   }
@@ -380,6 +378,7 @@ export class DrizzleRbacRepository implements RbacRepository {
         email: users.email,
         displayName: users.displayName,
         avatarUrl: users.avatarUrl,
+        avatarStorageKey: users.avatarStorageKey,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -394,7 +393,7 @@ export class DrizzleRbacRepository implements RbacRepository {
       id: row.id,
       email: row.email,
       displayName: row.displayName,
-      avatarUrl: row.avatarUrl,
+      avatarUrl: publicAvatarUrl(row.id, row.avatarUrl, row.avatarStorageKey),
       createdAt: row.createdAt,
     };
   }

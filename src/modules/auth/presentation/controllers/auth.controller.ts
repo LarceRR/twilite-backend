@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -281,7 +292,11 @@ export class AuthController {
   }
 }
 
-function readRequestDevice(request: FastifyRequest): { platform: 'web'; model: string | null; appVersion: string | null } {
+function readRequestDevice(request: FastifyRequest): {
+  platform: 'web';
+  model: string | null;
+  appVersion: string | null;
+} {
   const header = request.headers['user-agent'];
   const userAgent = typeof header === 'string' ? header.slice(0, 120) : null;
 

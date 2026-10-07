@@ -8,9 +8,9 @@ import {
   type UserPermissionOverrideType,
 } from '../../domain/repositories/RbacRepository';
 import { wouldCreateInheritanceCycle } from '../../domain/services/groupInheritance';
+import { RbacSeedService } from '../../seed/rbacSeed.service';
 import { EffectivePermissionsService } from './effectivePermissions.service';
 import { RbacCacheService } from './rbacCache.service';
-import { RbacSeedService } from '../../seed/rbacSeed.service';
 
 @Injectable()
 export class GroupsService {
@@ -63,9 +63,7 @@ export class GroupsService {
     if (input.parentGroupId !== undefined) {
       const parentOf = await this.rbac.loadGroupParentMap();
 
-      if (
-        wouldCreateInheritanceCycle(id, input.parentGroupId, parentOf)
-      ) {
+      if (wouldCreateInheritanceCycle(id, input.parentGroupId, parentOf)) {
         throw new ValidationError('Cannot set parent: would create a circular inheritance');
       }
 
@@ -142,7 +140,10 @@ export class UserRbacService {
 
   async setUserOverrides(
     userId: string,
-    overrides: readonly { readonly permissionId: string; readonly type: UserPermissionOverrideType }[],
+    overrides: readonly {
+      readonly permissionId: string;
+      readonly type: UserPermissionOverrideType;
+    }[],
   ) {
     const user = await this.rbac.findUserSummary(userId);
 

@@ -35,9 +35,13 @@ export function spawnBridgeRow(params: {
   const shuffled = [...columns];
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
     const swap = params.random.int(index + 1);
-    const temp = shuffled[index];
-    shuffled[index] = shuffled[swap] ?? temp;
-    shuffled[swap] = temp;
+    const left = shuffled[index];
+    const right = shuffled[swap];
+    if (left === undefined || right === undefined) {
+      continue;
+    }
+    shuffled[index] = right;
+    shuffled[swap] = left;
   }
 
   for (const column of shuffled) {

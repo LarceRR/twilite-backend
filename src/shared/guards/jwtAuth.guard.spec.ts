@@ -1,11 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { FastifyRequest } from 'fastify';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ACCESS_COOKIE, readAccessToken } from '@/modules/auth/application/services/sessionCookies';
-import type { SessionRepository } from '@/modules/auth/domain/repositories/SessionRepository';
 import type { TokenService } from '@/modules/auth/application/services/token.service';
+import type { SessionRepository } from '@/modules/auth/domain/repositories/SessionRepository';
 import { AuthenticationError } from '@/shared/errors';
 import type { Clock } from '@/shared/utils/clock';
 

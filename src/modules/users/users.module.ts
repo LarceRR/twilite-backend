@@ -10,10 +10,7 @@ import { UsersController } from './presentation/controllers/users.controller';
 @Module({
   imports: [RbacModule],
   controllers: [UsersController],
-  providers: [
-    { provide: USER_REPOSITORY, useClass: DrizzleUserRepository },
-    AvatarService,
-  ],
+  providers: [{ provide: USER_REPOSITORY, useClass: DrizzleUserRepository }, AvatarService],
   exports: [USER_REPOSITORY],
 })
 export class UsersModule {}

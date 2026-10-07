@@ -1,5 +1,8 @@
-import type { QrLoginChallenge, QrLoginChallengePatch } from '../../domain/qrLogin/qrLoginChallenge';
-import type { QrLoginStatus } from '../../domain/qrLogin/qrLoginChallenge';
+import type {
+  QrLoginChallenge,
+  QrLoginChallengePatch,
+  QrLoginStatus,
+} from '../../domain/qrLogin/qrLoginChallenge';
 import type { QrLoginChallengeRepository } from '../../domain/repositories/QrLoginChallengeRepository';
 
 /** Deterministic store for unit tests. TTL is enforced by `expiresAt` in the handler. */
