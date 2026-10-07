@@ -9,11 +9,14 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { createZodDto } from 'nestjs-zod';
 import { uploadTicketSchema } from '@twilite/contracts';
+import type { FastifyReply } from 'fastify';
+import { createZodDto } from 'nestjs-zod';
 
 import { catalogListQuerySchema } from '@/modules/tpg-pixel-objects/application/catalogCursor';
 import { pixelObjectListSchema } from '@/shared/contracts/pixelObjects.contract';
@@ -80,10 +83,7 @@ export class ProjectsController {
   @RequireRbac('tpg.editor.view')
   @ApiOperation({ summary: 'Проект по id (только владелец)' })
   @ApiOkResponse({ type: ProjectDtoClass })
-  async getById(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async getById(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.projects.getById(user.userId, id);
   }
 
@@ -109,6 +109,22 @@ export class ProjectsController {
     @Body() body: UpdateProjectDtoClass,
   ) {
     return this.projects.update(user.userId, id, body);
+  }
+
+  @Get(':id/avatar')
+  @RequireRbac('tpg.editor.view')
+  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Аватар проекта через API' })
+  async avatar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<StreamableFile> {
+    const file = await this.projects.readAvatar(id);
+    reply.header('Cache-Control', 'private, max-age=300');
+    return new StreamableFile(file.body, {
+      type: file.contentType,
+      length: file.body.length,
+    });
   }
 
   @Post(':id/avatar')
@@ -153,10 +169,7 @@ export class ProjectsController {
   @RequireRbac('tpg.editor.delete')
   @ApiOperation({ summary: 'Удалить проект (передача пользователю Twilite)' })
   @ApiOkResponse({ type: ProjectDtoClass })
-  async softDelete(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async softDelete(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.projects.softDelete(user.userId, id);
   }
 }

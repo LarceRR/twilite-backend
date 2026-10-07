@@ -1,15 +1,17 @@
 import { eq, inArray } from 'drizzle-orm';
 import type { Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets, pixelObjectRevisions, pixelObjects } from '@/database/schema';
-import type { StoragePort } from '@/infrastructure/storage/StoragePort';
+import { pixelObjectSheetPath } from '@/modules/tpg-pixel-objects/application/pixelObjectSheetPath';
 import { toPixelObjectMobileDto } from '@/modules/tpg-pixel-objects/application/toPixelObjectMobileDto';
 import type { PixelObjectMobileDto } from '@/shared/contracts/pixelObjects.contract';
-import { pixelObjectManifestSchema } from '@/shared/contracts/pixelObjects.contract';
+import {
+  pixelObjectManifestSchema,
+  pixelObjectTypeSchema,
+} from '@/shared/contracts/pixelObjects.contract';
 
 /** Batch-load published mobile DTOs for surface embeds (P2-S7). No N+1. */
 export async function loadPublishedMobileByIds(
   db: Database,
-  storage: StoragePort,
   ids: readonly string[],
 ): Promise<Map<string, PixelObjectMobileDto>> {
   const unique = [...new Set(ids.filter((id) => id.length > 0))];
@@ -22,9 +24,9 @@ export async function loadPublishedMobileByIds(
     .select({
       objectId: pixelObjects.id,
       title: pixelObjects.title,
+      objectType: pixelObjects.objectType,
       revisionNumber: pixelObjectRevisions.revisionNumber,
       manifest: pixelObjectRevisions.manifest,
-      storageKey: mediaAssets.storageKey,
     })
     .from(pixelObjects)
     .innerJoin(pixelObjectRevisions, eq(pixelObjectRevisions.id, pixelObjects.publishedRevisionId))
@@ -33,18 +35,17 @@ export async function loadPublishedMobileByIds(
 
   for (const row of rows) {
     const parsed = pixelObjectManifestSchema.safeParse(row.manifest);
-    if (!parsed.success) {
+    const objectType = pixelObjectTypeSchema.safeParse(row.objectType);
+    if (!parsed.success || !objectType.success) {
       continue;
     }
-    const sheetUrl = storage.publicUrl(row.storageKey);
-    if (sheetUrl === null || sheetUrl.length === 0) {
-      continue;
-    }
+    const sheetUrl = pixelObjectSheetPath(row.objectId, row.revisionNumber);
     result.set(
       row.objectId,
       toPixelObjectMobileDto({
         id: row.objectId,
         title: row.title,
+        objectType: objectType.data,
         sheetUrl,
         manifest: parsed.data,
         revision: row.revisionNumber,

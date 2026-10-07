@@ -57,6 +57,7 @@ describe('@twilite/contracts package', () => {
     const result = pixelObjectMobileSchema.safeParse({
       id: '11111111-1111-4111-8111-111111111111',
       title: 'Torch',
+      objectType: 'Good',
       format: PIXEL_OBJECT_FORMAT,
       sheetUrl: 'https://cdn.example/sheet.png',
       canvas: validManifest.canvas,

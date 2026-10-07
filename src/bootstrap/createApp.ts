@@ -12,6 +12,20 @@ import { REDIS_CLIENT } from '@/infrastructure/redis/redis.module';
 
 import { setupSwagger } from './swagger';
 
+/** Content types the browser may PUT when uploading through the API. */
+const UPLOAD_CONTENT_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/aac',
+  'audio/webm',
+  'application/pdf',
+  'text/plain',
+] as const;
+
 /** Fastify API bootstrap with HTTP, WebSocket and health endpoints. */
 export async function createApp(): Promise<{
   app: NestFastifyApplication;
@@ -19,7 +33,8 @@ export async function createApp(): Promise<{
 }> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ trustProxy: true, bodyLimit: 1_048_576 }),
+    // 100MB matches the largest configured media limit. Per-kind caps are enforced on the ticket.
+    new FastifyAdapter({ trustProxy: true, bodyLimit: 104_857_600 }),
     { bufferLogs: true },
   );
 
@@ -55,7 +70,26 @@ export async function createApp(): Promise<{
     credentials: true,
   });
 
-  // Multipart lets TPG accept device uploads (field `image`) without base64 JSON.
+  // Browser uploads PUT raw bytes (image/audio/pdf). The JSON parser stays the default.
+  const uploadBodyLimit = Math.max(
+    limits.media.imageMaxBytes,
+    limits.media.audioMaxBytes,
+    limits.media.avatarMaxBytes,
+    limits.tpg.pixelObjectSheetMaxBytes,
+  );
+  const fastify = app.getHttpAdapter().getInstance();
+  for (const type of UPLOAD_CONTENT_TYPES) {
+    if (!fastify.hasContentTypeParser(type)) {
+      fastify.addContentTypeParser(
+        type,
+        { parseAs: 'buffer', bodyLimit: uploadBodyLimit },
+        (_request, body, done) => {
+          done(null, body);
+        },
+      );
+    }
+  }
+
   await app.register(import('@fastify/multipart'), {
     limits: {
       files: 1,

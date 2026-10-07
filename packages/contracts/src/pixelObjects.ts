@@ -14,10 +14,14 @@ export type { PixelObjectManifest } from './tpo';
 /** `archived` is ADR-007 (P2-S5). */
 export const pixelObjectStatusSchema = z.enum(['pending', 'published', 'rejected', 'archived']);
 
+/** Moment kind chosen before the sprite is drawn. More values can be added later. */
+export const pixelObjectTypeSchema = z.enum(['Good', 'Bad']);
+
 export const submitPixelObjectSchema = z
   .object({
     title: z.string().trim().min(1).max(80),
     projectId: uuidSchema,
+    objectType: pixelObjectTypeSchema,
     manifest: pixelObjectManifestSchema,
   })
   .strict();
@@ -27,6 +31,14 @@ export const reassignPixelObjectSchema = z
     toProjectId: uuidSchema,
   })
   .strict();
+
+export const deletePixelObjectResultSchema = z
+  .object({
+    outcome: z.enum(['deleted', 'reassigned']),
+  })
+  .strict();
+
+export type DeletePixelObjectResult = z.infer<typeof deletePixelObjectResultSchema>;
 
 export const rejectPixelObjectSchema = z
   .object({
@@ -40,6 +52,7 @@ export const pixelObjectCatalogItemSchema = z.object({
   id: uuidSchema,
   projectId: uuidSchema,
   title: z.string(),
+  objectType: pixelObjectTypeSchema,
   status: pixelObjectStatusSchema.optional(),
   revision: z.number().int().min(1),
   manifest: pixelObjectManifestSchema,
@@ -54,6 +67,7 @@ export const pixelObjectDtoSchema = z.object({
   id: uuidSchema,
   projectId: uuidSchema,
   title: z.string(),
+  objectType: pixelObjectTypeSchema,
   authorDisplayName: z.string(),
   authorUserId: uuidSchema,
   status: pixelObjectStatusSchema,
@@ -80,6 +94,7 @@ export const pixelObjectMobileSchema = z
   .object({
     id: uuidSchema,
     title: z.string(),
+    objectType: pixelObjectTypeSchema,
     revision: z.number().int().min(1).optional(),
     format: z.literal(PIXEL_OBJECT_FORMAT),
     sheetUrl: z.string().min(1),
@@ -104,6 +119,7 @@ export const pixelObjectMobileSchema = z
   })
   .strict();
 
+export type PixelObjectType = z.infer<typeof pixelObjectTypeSchema>;
 export type SubmitPixelObjectDto = z.infer<typeof submitPixelObjectSchema>;
 export type ReassignPixelObjectDto = z.infer<typeof reassignPixelObjectSchema>;
 export type PixelObjectDto = z.infer<typeof pixelObjectDtoSchema>;

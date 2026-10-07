@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { Logger } from 'nestjs-pino';
 
@@ -17,6 +17,7 @@ import {
   STORAGE,
   type StoragePort,
 } from '@/infrastructure/storage/StoragePort';
+import { mediaUploadPath, projectAvatarPath } from '@/modules/media/domain/mediaApiPath';
 import { buildOpaqueStorageKey } from '@/modules/media/domain/opaqueStorageKey';
 import {
   type CatalogListQuery,
@@ -28,6 +29,10 @@ import {
   selectAuthorJoined,
   toPixelObjectDto,
 } from '@/modules/tpg-pixel-objects/application/pixelObjectQueries';
+import {
+  REASSIGNMENT_INBOX_TITLE,
+  TWILITE_SYSTEM_USER_EMAIL,
+} from '@/shared/constants/twiliteSystemUser';
 import type { UploadTicketDto } from '@/shared/contracts/media.contract';
 import type { PixelObjectDto } from '@/shared/contracts/pixelObjects.contract';
 import type {
@@ -38,7 +43,6 @@ import type {
   ReassignProjectDto,
   UpdateProjectDto,
 } from '@/shared/contracts/projects.contract';
-import { TWILITE_SYSTEM_USER_EMAIL } from '@/shared/constants/twiliteSystemUser';
 import {
   AuthorizationError,
   ConflictError,
@@ -131,8 +135,12 @@ export class ProjectsService {
     }
     const filter =
       cursor === null
-        ? eq(pixelObjects.projectId, projectId)
-        : and(eq(pixelObjects.projectId, projectId), authorCursorWhere(cursor));
+        ? and(eq(pixelObjects.projectId, projectId), ne(pixelObjects.status, 'archived'))
+        : and(
+            eq(pixelObjects.projectId, projectId),
+            ne(pixelObjects.status, 'archived'),
+            authorCursorWhere(cursor),
+          );
     if (filter === undefined) {
       throw new Error('listObjects: empty SQL expression');
     }
@@ -140,7 +148,7 @@ export class ProjectsService {
     const page = rows.slice(0, query.limit);
     const items: PixelObjectDto[] = [];
     for (const row of page) {
-      const dto = toPixelObjectDto(row, this.storage);
+      const dto = toPixelObjectDto(row);
       if (dto !== null) {
         items.push(dto);
       }
@@ -157,7 +165,11 @@ export class ProjectsService {
     return { items, nextCursor };
   }
 
-  async update(actorUserId: string, projectId: string, input: UpdateProjectDto): Promise<ProjectDto> {
+  async update(
+    actorUserId: string,
+    projectId: string,
+    input: UpdateProjectDto,
+  ): Promise<ProjectDto> {
     const project = await this.requireOwned(projectId, actorUserId);
     const titleMax = this.limits.tpg.projectTitleMaxLength;
     if (input.title !== undefined && input.title.length > titleMax) {
@@ -215,18 +227,11 @@ export class ProjectsService {
       throw new InfrastructureError('Не удалось создать запись о файле');
     }
 
-    const upload = await this.storage.createUploadUrl({
-      key: storageKey,
-      contentType: body.contentType,
-      byteSize: body.byteSize,
-      cacheControl: IMMUTABLE_OBJECT_CACHE_CONTROL,
-    });
-
     return {
       assetId: asset.id,
-      uploadUrl: upload.url,
+      uploadUrl: mediaUploadPath(asset.id),
       storageKey,
-      expiresAt: upload.expiresAt.toISOString(),
+      expiresAt: new Date(Date.now() + this.limits.media.signedUrlTtlSeconds * 1000).toISOString(),
       headers: {
         'Content-Type': body.contentType,
         'Cache-Control': IMMUTABLE_OBJECT_CACHE_CONTROL,
@@ -260,13 +265,6 @@ export class ProjectsService {
       throw new NotFoundError('Файл аватара не найден', { assetId });
     }
 
-    const publicUrl = this.storage.publicUrl(asset.storageKey);
-    if (publicUrl === null) {
-      throw new InfrastructureError(
-        'STORAGE_PUBLIC_URL не настроен — публичный URL аватара недоступен',
-      );
-    }
-
     if (asset.status !== 'ready' || asset.confirmedAt === null) {
       await this.db
         .update(mediaAssets)
@@ -292,17 +290,19 @@ export class ProjectsService {
     projectId: string,
     input: ReassignProjectDto,
   ): Promise<ProjectDto> {
-    await this.requireOwned(projectId, actorUserId);
+    const project = await this.requireOwned(projectId, actorUserId);
     if (input.toUserId === actorUserId) {
       return this.requireDto(projectId);
     }
+    this.assertNotReassignmentInbox(project);
     await this.transferOwnership(projectId, input.toUserId);
     // After transfer actor is no longer owner — return DTO for new owner view is still valid.
     return this.requireDto(projectId);
   }
 
   async softDelete(actorUserId: string, projectId: string): Promise<ProjectDto> {
-    await this.requireOwned(projectId, actorUserId);
+    const project = await this.requireOwned(projectId, actorUserId);
+    this.assertNotReassignmentInbox(project);
     const twiliteUserId = await this.requireTwiliteSystemUserId();
     if (actorUserId === twiliteUserId) {
       throw new ConflictError('Системный пользователь не может удалить проект');
@@ -334,6 +334,47 @@ export class ProjectsService {
 
   async requireProjectRow(projectId: string): Promise<ProjectRow> {
     return this.requireProject(projectId);
+  }
+
+  /**
+   * Project that receives objects handed to `ownerUserId` when the caller did not
+   * pick a project. Reused once it exists, even if the user already has others.
+   * Does not count toward project or object caps.
+   */
+  async ensureReassignmentInbox(ownerUserId: string): Promise<ProjectRow> {
+    const existing = await this.findReassignmentInbox(ownerUserId);
+    if (existing !== null) {
+      return existing;
+    }
+
+    try {
+      const [created] = await this.db
+        .insert(tpgProjects)
+        .values({
+          ownerId: ownerUserId,
+          title: REASSIGNMENT_INBOX_TITLE,
+          description: '',
+          isReassignmentInbox: true,
+        })
+        .returning();
+      if (created === undefined) {
+        throw new ValidationError('Не удалось создать проект');
+      }
+      return created;
+    } catch (error) {
+      if (!isUniqueViolation(error)) {
+        throw error;
+      }
+      const raced = await this.findReassignmentInbox(ownerUserId);
+      if (raced === null) {
+        throw error;
+      }
+      return raced;
+    }
+  }
+
+  async requireTwiliteSystemUserId(): Promise<string> {
+    return this.lookupTwiliteSystemUserId();
   }
 
   private async createOnce(ownerUserId: string, input: CreateProjectDto): Promise<ProjectDto> {
@@ -371,7 +412,11 @@ export class ProjectsService {
   }
 
   private async transferOwnership(projectId: string, toUserId: string): Promise<void> {
-    const [target] = await this.db.select({ id: users.id }).from(users).where(eq(users.id, toUserId)).limit(1);
+    const [target] = await this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, toUserId))
+      .limit(1);
     if (target === undefined) {
       throw new NotFoundError('Пользователь не найден', { userId: toUserId });
     }
@@ -388,7 +433,24 @@ export class ProjectsService {
     });
   }
 
-  private async requireTwiliteSystemUserId(): Promise<string> {
+  private assertNotReassignmentInbox(project: ProjectRow): void {
+    if (project.isReassignmentInbox) {
+      throw new ConflictError('Проект «Переназначенные» нельзя передать или удалить', {
+        code: 'PROJECT_REASSIGNMENT_INBOX',
+      });
+    }
+  }
+
+  private async findReassignmentInbox(ownerUserId: string): Promise<ProjectRow | null> {
+    const [project] = await this.db
+      .select()
+      .from(tpgProjects)
+      .where(and(eq(tpgProjects.ownerId, ownerUserId), eq(tpgProjects.isReassignmentInbox, true)))
+      .limit(1);
+    return project ?? null;
+  }
+
+  private async lookupTwiliteSystemUserId(): Promise<string> {
     const [user] = await this.db
       .select({ id: users.id })
       .from(users)
@@ -458,10 +520,7 @@ export class ProjectsService {
     readonly objectCount: number;
     readonly avatarStorageKey: string | null;
   }): Promise<ProjectDto> {
-    const avatarUrl = await this.resolveAvatarUrl(
-      input.project,
-      input.avatarStorageKey,
-    );
+    const avatarUrl = await this.resolveAvatarUrl(input.project, input.avatarStorageKey);
     return {
       id: input.project.id,
       title: input.project.title,
@@ -470,6 +529,7 @@ export class ProjectsService {
       ownerDisplayName: input.ownerDisplayName,
       avatarUrl,
       objectCount: input.objectCount,
+      isReassignmentInbox: input.project.isReassignmentInbox,
       createdAt: input.project.createdAt.toISOString(),
       updatedAt: input.project.updatedAt.toISOString(),
     };
@@ -480,7 +540,7 @@ export class ProjectsService {
     avatarStorageKey: string | null,
   ): Promise<string | null> {
     if (avatarStorageKey !== null && avatarStorageKey.length > 0) {
-      return this.storage.publicUrl(avatarStorageKey);
+      return projectAvatarPath(project.id);
     }
 
     const previewMedia = alias(mediaAssets, 'last_object_preview');
@@ -504,7 +564,63 @@ export class ProjectsService {
     if (last?.previewStorageKey == null || last.previewStorageKey.length === 0) {
       return null;
     }
-    return this.storage.publicUrl(last.previewStorageKey);
+    return projectAvatarPath(project.id);
+  }
+
+  async readAvatar(projectId: string): Promise<{ body: Buffer; contentType: string }> {
+    const [project] = await this.db
+      .select({
+        id: tpgProjects.id,
+        avatarMediaId: tpgProjects.avatarMediaId,
+      })
+      .from(tpgProjects)
+      .where(eq(tpgProjects.id, projectId))
+      .limit(1);
+    if (project === undefined) {
+      throw new NotFoundError('Проект не найден', { projectId });
+    }
+
+    if (project.avatarMediaId !== null) {
+      const [asset] = await this.db
+        .select()
+        .from(mediaAssets)
+        .where(eq(mediaAssets.id, project.avatarMediaId))
+        .limit(1);
+      if (asset === undefined) {
+        throw new NotFoundError('Аватар не найден', { projectId });
+      }
+      const body = await this.storage.getObject(asset.storageKey, {
+        maxBytes: this.limits.media.avatarMaxBytes,
+      });
+      return { body, contentType: asset.contentType };
+    }
+
+    const previewMedia = alias(mediaAssets, 'last_object_preview_bytes');
+    const [last] = await this.db
+      .select({
+        previewStorageKey: previewMedia.storageKey,
+        contentType: previewMedia.contentType,
+      })
+      .from(pixelObjects)
+      .leftJoin(
+        pixelObjectRevisions,
+        eq(
+          pixelObjectRevisions.id,
+          sql`coalesce(${pixelObjects.pendingRevisionId}, ${pixelObjects.publishedRevisionId})`,
+        ),
+      )
+      .leftJoin(previewMedia, eq(previewMedia.id, pixelObjectRevisions.previewMediaId))
+      .where(eq(pixelObjects.projectId, project.id))
+      .orderBy(desc(pixelObjects.createdAt), desc(pixelObjects.id))
+      .limit(1);
+
+    if (last?.previewStorageKey == null || last.previewStorageKey.length === 0) {
+      throw new NotFoundError('Аватар не найден', { projectId });
+    }
+    const body = await this.storage.getObject(last.previewStorageKey, {
+      maxBytes: this.limits.media.imageMaxBytes,
+    });
+    return { body, contentType: last.contentType ?? 'image/png' };
   }
 
   private async deleteAvatarAsset(assetId: string): Promise<void> {
@@ -522,4 +638,17 @@ export class ProjectsService {
       this.logger.warn({ err: error, assetId }, 'Не удалось удалить предыдущий аватар проекта');
     }
   }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (typeof current === 'object' && current !== null && !seen.has(current)) {
+    seen.add(current);
+    if ('code' in current && (current as { code?: unknown }).code === '23505') {
+      return true;
+    }
+    current = 'cause' in current ? (current as { cause?: unknown }).cause : undefined;
+  }
+  return false;
 }

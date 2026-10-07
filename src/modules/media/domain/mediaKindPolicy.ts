@@ -1,6 +1,12 @@
 import type { AppLimits } from '@/config/limits';
 
-export type MediaKind = 'image' | 'voice' | 'attachment' | 'avatar' | 'project-avatar' | 'pixel-sheet';
+export type MediaKind =
+  | 'image'
+  | 'voice'
+  | 'attachment'
+  | 'avatar'
+  | 'project-avatar'
+  | 'pixel-sheet';
 
 export type MediaKindPolicy = {
   readonly kind: MediaKind;

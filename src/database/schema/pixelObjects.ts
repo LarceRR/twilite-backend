@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { mediaAssets } from './media';
@@ -22,6 +23,8 @@ export const pixelObjects = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
+    /** Good / Bad. Chosen before the sprite exists; kept through publish. */
+    objectType: text('object_type').notNull().default('Good'),
     /** Dual-write head fields until P2-S2 cuts over reads to revisions. */
     manifest: jsonb('manifest').notNull(),
     sheetMediaId: uuid('sheet_media_id')
@@ -45,5 +48,8 @@ export const pixelObjects = pgTable(
     index('pixel_objects_status_created_idx').on(table.status, table.createdAt),
     index('pixel_objects_author_idx').on(table.authorUserId, table.updatedAt),
     index('pixel_objects_project_created_idx').on(table.projectId, table.createdAt),
+    index('pixel_objects_catalog_type_idx')
+      .on(table.objectType, table.projectId)
+      .where(sql`${table.publishedRevisionId} is not null and ${table.status} <> 'archived'`),
   ],
 );

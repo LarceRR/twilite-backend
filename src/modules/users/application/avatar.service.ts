@@ -4,12 +4,17 @@ import { Logger } from 'nestjs-pino';
 
 import { type AppLimits, LIMITS } from '@/config/limits';
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
-import { mediaAssets } from '@/database/schema';
+import { mediaAssets, users } from '@/database/schema';
 import {
   IMMUTABLE_OBJECT_CACHE_CONTROL,
   STORAGE,
   type StoragePort,
 } from '@/infrastructure/storage/StoragePort';
+import {
+  mediaContentPath,
+  mediaUploadPath,
+  userAvatarPath,
+} from '@/modules/media/domain/mediaApiPath';
 import { buildOpaqueStorageKey } from '@/modules/media/domain/opaqueStorageKey';
 import type {
   CreateAvatarUploadRequest,
@@ -63,18 +68,11 @@ export class AvatarService {
       throw new InfrastructureError('Не удалось создать запись о файле');
     }
 
-    const upload = await this.storage.createUploadUrl({
-      key: storageKey,
-      contentType: body.contentType,
-      byteSize: body.byteSize,
-      cacheControl: IMMUTABLE_OBJECT_CACHE_CONTROL,
-    });
-
     return {
       assetId: asset.id,
-      uploadUrl: upload.url,
+      uploadUrl: mediaUploadPath(asset.id),
       storageKey,
-      expiresAt: upload.expiresAt.toISOString(),
+      expiresAt: new Date(Date.now() + this.limits.media.signedUrlTtlSeconds * 1000).toISOString(),
       headers: {
         'Content-Type': body.contentType,
         'Cache-Control': IMMUTABLE_OBJECT_CACHE_CONTROL,
@@ -110,15 +108,7 @@ export class AvatarService {
         throw new NotFoundError('Пользователь не найден', { userId });
       }
 
-      return { user, asset: toAssetDto(asset, this.storage.publicUrl(asset.storageKey)) };
-    }
-
-    const publicUrl = this.storage.publicUrl(asset.storageKey);
-
-    if (publicUrl === null) {
-      throw new InfrastructureError(
-        'STORAGE_PUBLIC_URL не настроен — публичный URL аватара недоступен',
-      );
+      return { user, asset: toAssetDto(asset, mediaContentPath(asset.id)) };
     }
 
     const [ready] = await this.db
@@ -132,7 +122,7 @@ export class AvatarService {
     }
 
     const { user, previousStorageKey } = await this.users.setAvatar(userId, {
-      avatarUrl: publicUrl,
+      avatarUrl: userAvatarPath(userId),
       avatarStorageKey: ready.storageKey,
     });
 
@@ -151,7 +141,31 @@ export class AvatarService {
       }
     }
 
-    return { user, asset: toAssetDto(ready, publicUrl) };
+    return { user, asset: toAssetDto(ready, mediaContentPath(ready.id)) };
+  }
+
+  async read(userId: string): Promise<{ body: Buffer; contentType: string }> {
+    const [user] = await this.db
+      .select({ avatarStorageKey: users.avatarStorageKey })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const storageKey = user?.avatarStorageKey;
+    if (storageKey === undefined || storageKey === null || storageKey.length === 0) {
+      throw new NotFoundError('Аватар не найден', { userId });
+    }
+
+    const [asset] = await this.db
+      .select({ contentType: mediaAssets.contentType })
+      .from(mediaAssets)
+      .where(eq(mediaAssets.storageKey, storageKey))
+      .limit(1);
+
+    const body = await this.storage.getObject(storageKey, {
+      maxBytes: this.limits.media.avatarMaxBytes,
+    });
+    return { body, contentType: asset?.contentType ?? 'image/jpeg' };
   }
 }
 

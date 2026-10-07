@@ -51,6 +51,8 @@ export const projectDtoSchema = z.object({
   ownerDisplayName: z.string(),
   avatarUrl: z.string().nullable(),
   objectCount: z.number().int().min(0),
+  /** Bucket for objects handed to this user without a chosen project. */
+  isReassignmentInbox: z.boolean(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
 });

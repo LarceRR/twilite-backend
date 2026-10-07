@@ -3,7 +3,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { cacheKeys, cacheTtl } from '@/infrastructure/redis/cacheKeys';
 import { CACHE, type Cache } from '@/infrastructure/redis/redisCache';
-import { STORAGE, type StoragePort } from '@/infrastructure/storage/StoragePort';
 import { SpaceAccessService } from '@/modules/spaces/application/services/spaceAccess.service';
 import type { SpaceId } from '@/modules/spaces/domain/value-objects/SpacePermission';
 import { loadPublishedMobileByIds } from '@/modules/surface-objects/application/loadPublishedMobileByIds';
@@ -24,7 +23,6 @@ export class GetSurfaceSnapshotHandler {
     @Inject(SURFACE_OBJECT_REPOSITORY) private readonly objects: SurfaceObjectRepository,
     @Inject(CACHE) private readonly cache: Cache,
     @Inject(DATABASE) private readonly db: Database,
-    @Inject(STORAGE) private readonly storage: StoragePort,
     private readonly access: SpaceAccessService,
     private readonly surfaceResolver: SurfaceResolverService,
   ) {}
@@ -41,7 +39,7 @@ export class GetSurfaceSnapshotHandler {
         const pixelIds = objects
           .map((object) => object.pixelObjectId)
           .filter((id): id is string => typeof id === 'string' && id.length > 0);
-        const embeds = await loadPublishedMobileByIds(this.db, this.storage, pixelIds);
+        const embeds = await loadPublishedMobileByIds(this.db, pixelIds);
 
         return {
           surface: {

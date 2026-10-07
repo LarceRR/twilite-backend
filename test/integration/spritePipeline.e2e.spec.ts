@@ -8,7 +8,7 @@
  * 2. submit pixel object (Idempotency-Key)
  * 3. reject → resubmit (published pointer stays live if already published)
  * 4. publish → place on surface → snapshot contains embed
- * 5. archive → catalog hides, surface binding remains
+ * 5. author delete of a draft removes it; author delete of a published object reassigns it to Twilite
  *
  * This file is a placeholder contract for CI; enable when staging deps are present.
  */

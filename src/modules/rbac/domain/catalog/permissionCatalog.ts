@@ -143,6 +143,11 @@ export const PERMISSION_CATALOG: readonly PermissionCatalogEntry[] = [
     'Read the published pixel object catalog',
     'Чтение опубликованного каталога пиксельных объектов',
   ),
+  entry(
+    'tpg.pixelObjects.purge',
+    'Permanently delete a pixel object and its files',
+    'Полное удаление пиксельного объекта и его файлов',
+  ),
   entry('tpg.pixelObjects.*', 'All pixel object actions', 'Все действия с пиксельными объектами'),
 ] as const;
 
@@ -183,4 +188,5 @@ export const ADMIN_GROUP_PERMISSIONS: readonly string[] = [
   'twilite.auth.*',
   'tpg.themes.moderate',
   'tpg.pixelObjects.moderate',
+  'tpg.pixelObjects.purge',
 ];

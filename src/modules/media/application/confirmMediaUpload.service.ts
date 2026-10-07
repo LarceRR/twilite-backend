@@ -5,6 +5,7 @@ import { Logger } from 'nestjs-pino';
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets } from '@/database/schema';
 import { STORAGE, type StoragePort } from '@/infrastructure/storage/StoragePort';
+import { mediaContentPath } from '@/modules/media/domain/mediaApiPath';
 import type { MediaAssetDto } from '@/shared/contracts/media.contract';
 import { DomainError, NotFoundError } from '@/shared/errors';
 import { ErrorCode } from '@/shared/errors/AppError';
@@ -23,7 +24,7 @@ export class ConfirmMediaUploadService {
     const asset = await this.findOwnedAsset(ownerId, assetId);
 
     if (asset.status === 'ready' && asset.confirmedAt !== null) {
-      return toMediaAssetDto(asset, this.storage.publicUrl(asset.storageKey));
+      return toMediaAssetDto(asset, mediaContentPath(asset.id));
     }
 
     if (asset.status === 'rejected') {
@@ -47,12 +48,12 @@ export class ConfirmMediaUploadService {
     if (ready === undefined) {
       const current = await this.findOwnedAsset(ownerId, assetId);
       if (current.status === 'ready') {
-        return toMediaAssetDto(current, this.storage.publicUrl(current.storageKey));
+        return toMediaAssetDto(current, mediaContentPath(current.id));
       }
       throw new NotFoundError('Файл не найден', { assetId });
     }
 
-    return toMediaAssetDto(ready, this.storage.publicUrl(ready.storageKey));
+    return toMediaAssetDto(ready, mediaContentPath(ready.id));
   }
 
   private async findOwnedAsset(ownerId: string, assetId: string): Promise<MediaAssetRow> {

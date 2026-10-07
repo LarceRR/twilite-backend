@@ -85,6 +85,27 @@
       "when": 1791600000000,
       "tag": "0011_tpg_project_description",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791700000000,
+      "tag": "0012_reassignment_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791800000000,
+      "tag": "0013_pixel_object_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791900000000,
+      "tag": "0014_pixel_object_catalog_type_idx",
+      "breakpoints": true
     }
   ]
 }

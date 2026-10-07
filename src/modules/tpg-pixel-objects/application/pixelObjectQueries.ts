@@ -3,12 +3,20 @@ import { alias } from 'drizzle-orm/pg-core';
 
 import type { Database } from '@/database/drizzle/drizzle.module';
 import { mediaAssets, pixelObjectRevisions, pixelObjects, users } from '@/database/schema';
-import type { StoragePort } from '@/infrastructure/storage/StoragePort';
-import type { PixelObjectDto, PixelObjectManifest } from '@/shared/contracts/pixelObjects.contract';
-import { pixelObjectManifestSchema } from '@/shared/contracts/pixelObjects.contract';
-import { InfrastructureError, ValidationError } from '@/shared/errors';
+import type {
+  PixelObjectDto,
+  PixelObjectManifest,
+  PixelObjectType,
+} from '@/shared/contracts/pixelObjects.contract';
+import {
+  pixelObjectManifestSchema,
+  pixelObjectTypeSchema,
+} from '@/shared/contracts/pixelObjects.contract';
+import { ValidationError } from '@/shared/errors';
 
 import type { CatalogCursor } from './catalogCursor';
+import { authorFacingStatusSql } from './pixelObjectDeletion';
+import { pixelObjectPreviewPath, pixelObjectSheetPath } from './pixelObjectSheetPath';
 
 export type PixelObjectRow = typeof pixelObjects.$inferSelect;
 
@@ -57,9 +65,18 @@ export function toIsoStringOrNull(value: Date | string | null | undefined): stri
   return null;
 }
 
+function requireObjectType(value: string): PixelObjectType {
+  const parsed = pixelObjectTypeSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new ValidationError('Неизвестный тип объекта', [
+      { path: 'objectType', message: 'Ожидается Good или Bad' },
+    ]);
+  }
+  return parsed.data;
+}
+
 export function toPixelObjectDto(
   row: JoinedPixelObject,
-  storage: StoragePort,
   options: { readonly quarantineCorrupt?: boolean } = {},
 ): PixelObjectDto | null {
   const manifest = parseManifestSafely(row.manifest, row.object.id);
@@ -72,20 +89,18 @@ export function toPixelObjectDto(
     ]);
   }
 
-  const sheetUrl = storage.publicUrl(row.storageKey);
-  if (sheetUrl === null || sheetUrl.length === 0) {
-    throw new InfrastructureError('Публичный URL spritesheet недоступен');
-  }
+  const sheetUrl = pixelObjectSheetPath(row.object.id, row.revisionNumber);
 
   const previewUrl =
     row.previewStorageKey !== null && row.previewStorageKey.length > 0
-      ? storage.publicUrl(row.previewStorageKey)
+      ? pixelObjectPreviewPath(row.object.id, row.revisionNumber)
       : null;
 
   return {
     id: row.object.id,
     projectId: row.object.projectId,
     title: row.object.title,
+    objectType: requireObjectType(row.object.objectType),
     authorDisplayName: row.authorDisplayName,
     authorUserId: row.object.authorUserId,
     status: row.status,
@@ -182,7 +197,7 @@ export async function selectAuthorJoined(
       reviewedAt: sql<
         Date | string | null
       >`coalesce(${rev.reviewedAt}, ${pixelObjects.reviewedAt})`,
-      status: sql<PixelObjectRow['status']>`coalesce(${rev.status}, ${pixelObjects.status})`,
+      status: authorFacingStatusSql<PixelObjectRow['status']>(rev.status, pixelObjects.status),
       sortAt: pixelObjects.updatedAt,
     })
     .from(pixelObjects)

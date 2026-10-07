@@ -1,6 +1,21 @@
-import { Body, Controller, Headers, Inject, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  Inject,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Req,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { createZodDto } from 'nestjs-zod';
 
 import { type AppLimits, LIMITS } from '@/config/limits';
@@ -12,6 +27,7 @@ import {
   type StoragePort,
 } from '@/infrastructure/storage/StoragePort';
 import { EntitlementsService } from '@/modules/billing/application/services/entitlements.service';
+import { mediaUploadPath } from '@/modules/media/domain/mediaApiPath';
 import type { UserId } from '@/modules/users/domain/value-objects/UserId';
 import type { MediaAssetDto, UploadTicketDto } from '@/shared/contracts/media.contract';
 import {
@@ -21,7 +37,7 @@ import {
 } from '@/shared/contracts/media.contract';
 import { type AuthenticatedUser, CurrentUser } from '@/shared/decorators/auth.decorators';
 import { RequireRbac } from '@/shared/decorators/rbac.decorators';
-import { InfrastructureError } from '@/shared/errors';
+import { InfrastructureError, ValidationError } from '@/shared/errors';
 import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 
 import {
@@ -30,6 +46,7 @@ import {
 } from '../../application/assertMediaUploadPolicy';
 import { ConfirmMediaUploadService } from '../../application/confirmMediaUpload.service';
 import { countUploadsToday } from '../../application/countUploadsToday';
+import { ReceiveMediaUploadService } from '../../application/receiveMediaUpload.service';
 import { buildOpaqueStorageKey } from '../../domain/opaqueStorageKey';
 
 class CreateUploadDto extends createZodDto(createUploadRequestSchema) {}
@@ -45,12 +62,12 @@ export class MediaController {
     @Inject(LIMITS) private readonly limits: AppLimits,
     private readonly entitlements: EntitlementsService,
     private readonly confirmUpload: ConfirmMediaUploadService,
+    private readonly receiveUpload: ReceiveMediaUploadService,
     private readonly idempotency: IdempotencyService,
   ) {}
 
   /**
-   * Two steps by design: the API issues a presigned URL, the client uploads
-   * directly, then confirms. Bytes never pass through the API process.
+   * The client PUTs bytes to uploadUrl on this API. Object storage stays private.
    */
   @Post('uploads')
   @RequireRbac('twilite.media.upload')
@@ -67,6 +84,46 @@ export class MediaController {
       scope: `media:upload:${user.userId}`,
       payload: body,
       operation: () => this.createUploadOnce(user.userId, body),
+    });
+  }
+
+  @Put('uploads/:assetId')
+  @HttpCode(204)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Загрузить байты файла через API' })
+  async receive(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+    @Req() request: FastifyRequest,
+  ): Promise<void> {
+    const body = request.body;
+    if (!Buffer.isBuffer(body)) {
+      throw new ValidationError('Тело запроса должно быть файлом', [
+        { path: 'body', message: 'Ожидаются байты с Content-Type из тикета' },
+      ]);
+    }
+    const contentType = request.headers['content-type'];
+    await this.receiveUpload.receive(
+      user.userId,
+      assetId,
+      body,
+      typeof contentType === 'string' ? contentType : undefined,
+    );
+  }
+
+  @Get(':assetId')
+  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Скачать свой файл. Бакет клиенту не отдаётся.' })
+  async content(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<StreamableFile> {
+    const file = await this.receiveUpload.readOwned(user.userId, assetId);
+    reply.header('Cache-Control', 'private, max-age=3600');
+    return new StreamableFile(file.body, {
+      type: file.contentType,
+      length: file.body.length,
     });
   }
 
@@ -127,18 +184,11 @@ export class MediaController {
       throw new InfrastructureError('Не удалось создать запись о файле');
     }
 
-    const upload = await this.storage.createUploadUrl({
-      key: storageKey,
-      contentType: body.contentType,
-      byteSize: body.byteSize,
-      cacheControl: IMMUTABLE_OBJECT_CACHE_CONTROL,
-    });
-
     return {
       assetId: asset.id,
-      uploadUrl: upload.url,
+      uploadUrl: mediaUploadPath(asset.id),
       storageKey,
-      expiresAt: upload.expiresAt.toISOString(),
+      expiresAt: new Date(Date.now() + this.limits.media.signedUrlTtlSeconds * 1000).toISOString(),
       headers: {
         'Content-Type': body.contentType,
         'Cache-Control': IMMUTABLE_OBJECT_CACHE_CONTROL,

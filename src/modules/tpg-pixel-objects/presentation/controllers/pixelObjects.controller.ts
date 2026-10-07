@@ -1,21 +1,28 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
+  HttpCode,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { pixelObjectLimitsSchema } from '@twilite/contracts';
+import type { FastifyReply } from 'fastify';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 import {
+  deletePixelObjectResultSchema,
   pixelObjectDtoSchema,
   pixelObjectListSchema,
   pixelObjectMobileSchema,
@@ -27,6 +34,9 @@ import { type AuthenticatedUser, CurrentUser } from '@/shared/decorators/auth.de
 import { RequireAnyRbac, RequireRbac } from '@/shared/decorators/rbac.decorators';
 
 import { catalogListQuerySchema } from '../../application/catalogCursor';
+import { catalogPageSchema } from '../../application/catalogPageSchema';
+import { CatalogProjectsService } from '../../application/catalogProjects.service';
+import { catalogProjectsQuerySchema } from '../../application/catalogProjectsQuery';
 import { MediaGcService } from '../../application/mediaGc.service';
 import { PixelObjectsService } from '../../application/pixelObjects.service';
 
@@ -37,12 +47,15 @@ class PixelObjectDtoClass extends createZodDto(pixelObjectDtoSchema) {}
 class PixelObjectListDtoClass extends createZodDto(pixelObjectListSchema) {}
 class PixelObjectMobileDtoClass extends createZodDto(pixelObjectMobileSchema) {}
 class PixelObjectLimitsDtoClass extends createZodDto(pixelObjectLimitsSchema) {}
+class DeletePixelObjectResultDtoClass extends createZodDto(deletePixelObjectResultSchema) {}
 
 const mineListQuerySchema = catalogListQuerySchema.extend({
   projectId: z.string().uuid().optional(),
 });
 class CatalogListQueryDtoClass extends createZodDto(catalogListQuerySchema) {}
 class MineListQueryDtoClass extends createZodDto(mineListQuerySchema) {}
+class CatalogProjectsQueryDtoClass extends createZodDto(catalogProjectsQuerySchema) {}
+class CatalogPageDtoClass extends createZodDto(catalogPageSchema) {}
 
 @ApiTags('pixel-objects')
 @Controller('tpg/pixel-objects')
@@ -50,6 +63,7 @@ export class PixelObjectsController {
   constructor(
     private readonly objects: PixelObjectsService,
     private readonly mediaGc: MediaGcService,
+    private readonly catalogProjects: CatalogProjectsService,
   ) {}
 
   @Get()
@@ -80,6 +94,15 @@ export class PixelObjectsController {
     return this.objects.listMine(user.userId, mineListQuerySchema.parse(query));
   }
 
+  @Get('catalog')
+  @RequireRbac('tpg.pixelObjects.readPublished')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Проекты с опубликованными объектами одного типа' })
+  @ApiOkResponse({ type: CatalogPageDtoClass })
+  async catalog(@Query() query: CatalogProjectsQueryDtoClass) {
+    return this.catalogProjects.list(catalogProjectsQuerySchema.parse(query));
+  }
+
   @Get('moderation')
   @RequireRbac('tpg.pixelObjects.moderate')
   @ApiOperation({ summary: 'Очередь модерации пиксельных объектов' })
@@ -94,6 +117,52 @@ export class PixelObjectsController {
   @ApiOkResponse({ type: PixelObjectMobileDtoClass })
   async mobile(@Param('id', ParseUUIDPipe) id: string) {
     return this.objects.getMobile(id);
+  }
+
+  @Get(':id/revisions/:revision/sheet')
+  @RequireAnyRbac(
+    'tpg.pixelObjects.readPublished',
+    'tpg.pixelObjects.submit',
+    'tpg.pixelObjects.create',
+    'tpg.pixelObjects.moderate',
+  )
+  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  @ApiOperation({ summary: 'PNG spritesheet ревизии. Клиент не ходит в R2.' })
+  async sheet(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('revision', ParseIntPipe) revision: number,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<StreamableFile> {
+    const file = await this.objects.readSheet(user.userId, id, revision);
+    reply.header('Cache-Control', file.cacheControl);
+    return new StreamableFile(file.body, {
+      type: file.contentType,
+      length: file.body.length,
+    });
+  }
+
+  @Get(':id/revisions/:revision/preview')
+  @RequireAnyRbac(
+    'tpg.pixelObjects.readPublished',
+    'tpg.pixelObjects.submit',
+    'tpg.pixelObjects.create',
+    'tpg.pixelObjects.moderate',
+  )
+  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  @ApiOperation({ summary: 'PNG превью ревизии. Клиент не ходит в R2.' })
+  async preview(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('revision', ParseIntPipe) revision: number,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<StreamableFile> {
+    const file = await this.objects.readPreview(user.userId, id, revision);
+    reply.header('Cache-Control', file.cacheControl);
+    return new StreamableFile(file.body, {
+      type: file.contentType,
+      length: file.body.length,
+    });
   }
 
   @Get(':id')
@@ -144,12 +213,33 @@ export class PixelObjectsController {
     return this.objects.reassign(user.userId, id, body);
   }
 
-  @Post(':id/archive')
-  @RequireAnyRbac('tpg.pixelObjects.submit', 'tpg.pixelObjects.create', 'tpg.pixelObjects.moderate')
-  @ApiOperation({ summary: 'Архивировать объект (каталог скрывает, размещения остаются)' })
-  @ApiOkResponse({ type: PixelObjectDtoClass })
-  async archive(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.objects.archive(user.userId, id);
+  @Delete(':id/permanent')
+  @HttpCode(204)
+  @RequireRbac('tpg.pixelObjects.purge')
+  @ApiOperation({ summary: 'Полностью удалить объект любого статуса, включая файлы в хранилище' })
+  @ApiNoContentResponse()
+  async purge(@CurrentUser() user: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
+    await this.objects.purge(user.userId, id);
+  }
+
+  @Delete(':id')
+  @RequireAnyRbac('tpg.pixelObjects.submit', 'tpg.pixelObjects.create')
+  @ApiOperation({
+    summary:
+      'Удалить объект: неопубликованный стирается, опубликованный переходит пользователю Twilite',
+  })
+  @ApiOkResponse({ type: DeletePixelObjectResultDtoClass })
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const result = await this.objects.remove(user.userId, id);
+    if (result.outcome === 'deleted') {
+      reply.code(204);
+      return;
+    }
+    return result;
   }
 
   @Post(':id/publish')

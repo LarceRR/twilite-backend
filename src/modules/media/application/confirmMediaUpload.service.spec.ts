@@ -78,6 +78,8 @@ describe('ConfirmMediaUploadService', () => {
 
     expect(dto.status).toBe('ready');
     expect(dto.id).toBe(ASSET_ID);
+    expect(dto.url).toBe(`/v1/media/${ASSET_ID}`);
+    expect(storage.publicUrl).not.toHaveBeenCalled();
     expect(storage.headObject).toHaveBeenCalledWith(pending.storageKey);
   });
 

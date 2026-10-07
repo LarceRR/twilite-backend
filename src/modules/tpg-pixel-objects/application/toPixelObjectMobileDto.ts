@@ -1,11 +1,13 @@
 import type {
   PixelObjectManifest,
   PixelObjectMobileDto,
+  PixelObjectType,
 } from '@/shared/contracts/pixelObjects.contract';
 
 export function toPixelObjectMobileDto(input: {
   readonly id: string;
   readonly title: string;
+  readonly objectType: PixelObjectType;
   readonly sheetUrl: string;
   readonly manifest: PixelObjectManifest;
   readonly revision?: number;
@@ -15,6 +17,7 @@ export function toPixelObjectMobileDto(input: {
   return {
     id: input.id,
     title: input.title,
+    objectType: input.objectType,
     revision: input.revision,
     format: manifest.format,
     sheetUrl: input.sheetUrl,
