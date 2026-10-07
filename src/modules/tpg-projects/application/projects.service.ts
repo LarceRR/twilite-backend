@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { Logger } from 'nestjs-pino';
 
@@ -51,6 +51,7 @@ import {
   ValidationError,
 } from '@/shared/errors';
 import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
+import { AuditLogService } from '@/shared/audit/auditLog.service';
 
 type ProjectRow = typeof tpgProjects.$inferSelect;
 
@@ -62,6 +63,7 @@ export class ProjectsService {
     @Inject(LIMITS) private readonly limits: AppLimits,
     private readonly logger: Logger,
     private readonly idempotency: IdempotencyService,
+    private readonly audit: AuditLogService,
   ) {}
 
   getLimits(): ProjectLimits {
@@ -296,7 +298,6 @@ export class ProjectsService {
     }
     this.assertNotReassignmentInbox(project);
     await this.transferOwnership(projectId, input.toUserId);
-    // After transfer actor is no longer owner — return DTO for new owner view is still valid.
     return this.requireDto(projectId);
   }
 
@@ -309,6 +310,127 @@ export class ProjectsService {
     }
     await this.transferOwnership(projectId, twiliteUserId);
     return this.requireDto(projectId);
+  }
+
+  async batchSoftDelete(actorUserId: string, projectIds: string[]): Promise<number> {
+    if (projectIds.length === 0) {
+      return 0;
+    }
+    const twiliteUserId = await this.requireTwiliteSystemUserId();
+    const projects = await this.db
+      .select()
+      .from(tpgProjects)
+      .where(inArray(tpgProjects.id, projectIds));
+
+    const owned = projects.filter(
+      (p) => p.ownerId === actorUserId && !p.isReassignmentInbox,
+    );
+
+    if (owned.length === 0) {
+      return 0;
+    }
+
+    await this.db
+      .update(tpgProjects)
+      .set({ ownerId: twiliteUserId, updatedAt: new Date() })
+      .where(
+        and(
+          inArray(
+            tpgProjects.id,
+            owned.map((p) => p.id),
+          ),
+          eq(tpgProjects.ownerId, actorUserId),
+        ),
+      );
+
+    for (const p of owned) {
+      await this.audit.write({
+        actorUserId,
+        action: 'tpg_project.soft_delete',
+        resource: 'tpg_project',
+        resourceId: p.id,
+      });
+    }
+
+    return owned.length;
+  }
+
+  async batchHardDelete(actorUserId: string, projectIds: string[]): Promise<number> {
+    if (projectIds.length === 0) {
+      return 0;
+    }
+
+    const projects = await this.db
+      .select()
+      .from(tpgProjects)
+      .where(inArray(tpgProjects.id, projectIds));
+
+    const purged = await this.db.transaction(async (tx) => {
+      let count = 0;
+      for (const project of projects) {
+        if (project.isReassignmentInbox) {
+          continue;
+        }
+        try {
+          const objects = await tx
+            .select({ id: pixelObjects.id })
+            .from(pixelObjects)
+            .where(eq(pixelObjects.projectId, project.id));
+
+          for (const obj of objects) {
+            const revisions = await tx
+              .select({
+                sheetMediaId: pixelObjectRevisions.sheetMediaId,
+                previewMediaId: pixelObjectRevisions.previewMediaId,
+              })
+              .from(pixelObjectRevisions)
+              .where(eq(pixelObjectRevisions.pixelObjectId, obj.id));
+
+            const mediaIds = new Set<string>([
+              (await tx
+                .select({ id: pixelObjects.sheetMediaId })
+                .from(pixelObjects)
+                .where(eq(pixelObjects.id, obj.id))
+                .limit(1))[0]?.id,
+            ]);
+            for (const rev of revisions) {
+              mediaIds.add(rev.sheetMediaId);
+              if (rev.previewMediaId) mediaIds.add(rev.previewMediaId);
+            }
+
+            await tx
+              .delete(pixelObjectRevisions)
+              .where(eq(pixelObjectRevisions.pixelObjectId, obj.id));
+            await tx.delete(pixelObjects).where(eq(pixelObjects.id, obj.id));
+          }
+
+          if (project.avatarMediaId) {
+            await tx
+              .delete(mediaAssets)
+              .where(eq(mediaAssets.id, project.avatarMediaId));
+          }
+
+          await tx.delete(tpgProjects).where(eq(tpgProjects.id, project.id));
+          count += 1;
+        } catch (error) {
+          this.logger.error({ err: error, projectId: project.id }, 'batch_hard_delete_project_error');
+        }
+      }
+      return count;
+    });
+
+    for (const project of projects) {
+      if (!project.isReassignmentInbox) {
+        await this.audit.write({
+          actorUserId,
+          action: 'tpg_project.purge',
+          resource: 'tpg_project',
+          resourceId: project.id,
+        });
+      }
+    }
+
+    return purged;
   }
 
   /** Used by pixel-objects submit to enforce ownership + capacity. */
@@ -336,11 +458,6 @@ export class ProjectsService {
     return this.requireProject(projectId);
   }
 
-  /**
-   * Project that receives objects handed to `ownerUserId` when the caller did not
-   * pick a project. Reused once it exists, even if the user already has others.
-   * Does not count toward project or object caps.
-   */
   async ensureReassignmentInbox(ownerUserId: string): Promise<ProjectRow> {
     const existing = await this.findReassignmentInbox(ownerUserId);
     if (existing !== null) {
