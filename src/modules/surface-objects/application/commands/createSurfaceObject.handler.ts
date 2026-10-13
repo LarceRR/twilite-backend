@@ -6,11 +6,7 @@ import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { SpaceAccessService } from '@/modules/spaces/application/services/spaceAccess.service';
 import type { SpaceId } from '@/modules/spaces/domain/value-objects/SpacePermission';
 import { SurfaceResolverService } from '@/modules/surfaces/application/services/surfaceResolver.service';
-import {
-  SURFACE_REPOSITORY,
-  type SurfaceRepository,
-} from '@/modules/surfaces/domain/repositories/SurfaceRepository';
-import { spawnBridgeRow } from '@/modules/surfaces/domain/services/spawnBridgeRow';
+import { spawnActiveCell } from '@/modules/surfaces/domain/services/spawnActiveCell';
 import type { UserId } from '@/modules/users/domain/value-objects/UserId';
 import { ConflictError, DomainError } from '@/shared/errors';
 import { ErrorCode } from '@/shared/errors/AppError';
@@ -44,7 +40,6 @@ const MAX_CELL_ATTEMPTS = 5;
 export class CreateSurfaceObjectHandler {
   constructor(
     @Inject(SURFACE_OBJECT_REPOSITORY) private readonly objects: SurfaceObjectRepository,
-    @Inject(SURFACE_REPOSITORY) private readonly surfaces: SurfaceRepository,
     @Inject(RANDOM_SOURCE) private readonly random: RandomSource,
     @Inject(DATABASE) private readonly db: Database,
     @Inject(LIMITS) private readonly limits: AppLimits,
@@ -89,24 +84,13 @@ export class CreateSurfaceObjectHandler {
       subjectUserId,
     });
     const surface = await this.surfaceResolver.resolve(space.id);
-    const existing = await this.objects.listBySurface(surface.id);
-    if (existing.length >= this.limits.moments.objectsPerSurface) {
-      throw new DomainError(
-        'Поверхность заполнена',
-        { code: 'SURFACE_FULL', surfaceId: surface.id },
-        { code: ErrorCode.DOMAIN_RULE_VIOLATION, httpStatus: 422 },
-      );
-    }
-
     const created = await this.insertAtFreeCell({
       surfaceId: surface.id,
       spaceId: space.id,
       command,
       subjectUserId,
       pixelObjectId,
-      existing,
     });
-    await this.surfaces.touch(surface.id);
     await this.access.invalidate(space.id);
     this.events.emit(domainEventNames.surfaceObjectCreated, {
       spaceId: space.id,
@@ -141,50 +125,12 @@ export class CreateSurfaceObjectHandler {
     readonly command: CreateSurfaceObjectCommand;
     readonly subjectUserId: UserId;
     readonly pixelObjectId: string | null;
-    readonly existing: readonly SurfaceObject[];
   }): Promise<SurfaceObject> {
     let lastConflict: ConflictError | null = null;
-    let occupied = params.existing.map((object) => object.cell);
-    let lastCreated = params.existing.reduce<(typeof params.existing)[number] | undefined>(
-      (latest, object) =>
-        latest === undefined || object.createdAt >= latest.createdAt ? object : latest,
-      undefined,
-    );
 
     for (let attempt = 0; attempt < MAX_CELL_ATTEMPTS; attempt += 1) {
-      if (attempt > 0) {
-        const refreshed = await this.objects.listBySurface(params.surfaceId);
-        if (refreshed.length >= this.limits.moments.objectsPerSurface) {
-          throw new DomainError(
-            'Поверхность заполнена',
-            { code: 'SURFACE_FULL', surfaceId: params.surfaceId },
-            { code: ErrorCode.DOMAIN_RULE_VIOLATION, httpStatus: 422 },
-          );
-        }
-        occupied = refreshed.map((object) => object.cell);
-        lastCreated = refreshed.reduce<(typeof refreshed)[number] | undefined>(
-          (latest, object) =>
-            latest === undefined || object.createdAt >= latest.createdAt ? object : latest,
-          undefined,
-        );
-      }
-      const cell = spawnBridgeRow({
-        occupied,
-        random: this.random,
-        ...(lastCreated === undefined ? {} : { lastCreated: lastCreated.cell }),
-      });
       try {
-        return await this.objects.insert({
-          spaceId: params.spaceId,
-          surfaceId: params.surfaceId,
-          cell,
-          kind: params.command.kind,
-          state: 'Emerging',
-          createdByUserId: params.command.createdByUserId,
-          subjectUserId: params.subjectUserId,
-          metadata: params.command.metadata,
-          pixelObjectId: params.pixelObjectId,
-        });
+        return await this.insertOnce(params);
       } catch (error) {
         if (error instanceof ConflictError) {
           lastConflict = error;
@@ -196,6 +142,35 @@ export class CreateSurfaceObjectHandler {
     throw (
       lastConflict ??
       new ConflictError('Не удалось занять ячейку на поверхности', { surfaceId: params.surfaceId })
+    );
+  }
+
+  private async insertOnce(params: {
+    readonly surfaceId: SurfaceObject['surfaceId'];
+    readonly spaceId: SpaceId;
+    readonly command: CreateSurfaceObjectCommand;
+    readonly subjectUserId: UserId;
+    readonly pixelObjectId: string | null;
+  }): Promise<SurfaceObject> {
+    const created = await this.objects.insertAtNextCell(
+      {
+        spaceId: params.spaceId,
+        surfaceId: params.surfaceId,
+        kind: params.command.kind,
+        state: 'Emerging',
+        createdByUserId: params.command.createdByUserId,
+        subjectUserId: params.subjectUserId,
+        metadata: params.command.metadata,
+        pixelObjectId: params.pixelObjectId,
+      },
+      this.limits.moments.objectsPerSurface,
+      (context) => spawnActiveCell({ ...context, random: this.random }),
+    );
+    if (created !== null) return created;
+    throw new DomainError(
+      'Поверхность заполнена',
+      { code: 'SURFACE_FULL', surfaceId: params.surfaceId },
+      { code: ErrorCode.DOMAIN_RULE_VIOLATION, httpStatus: 422 },
     );
   }
 }

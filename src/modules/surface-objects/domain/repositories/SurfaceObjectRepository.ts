@@ -23,6 +23,14 @@ export type InsertSurfaceObjectInput = {
   readonly pixelObjectId?: string | null;
 };
 
+export type SurfaceSpawnContext = {
+  readonly generation: number;
+  readonly occupied: readonly Cell[];
+  readonly recentColumns: readonly number[];
+};
+
+export type SurfaceCellSelector = (context: SurfaceSpawnContext) => Cell;
+
 export interface SurfaceObjectRepository {
   listBySurface(surfaceId: SurfaceId): Promise<readonly SurfaceObject[]>;
   listOccupiedCells(surfaceId: SurfaceId): Promise<readonly Cell[]>;
@@ -33,6 +41,12 @@ export interface SurfaceObjectRepository {
    * creates can never both win the same cell.
    */
   insert(input: InsertSurfaceObjectInput): Promise<SurfaceObject>;
+
+  insertAtNextCell(
+    input: Omit<InsertSurfaceObjectInput, 'cell'>,
+    maxObjects: number,
+    selectCell: SurfaceCellSelector,
+  ): Promise<SurfaceObject | null>;
 
   /** Persists an already-validated aggregate; fails on a version mismatch. */
   update(object: SurfaceObject, expectedVersion: number): Promise<SurfaceObject>;

@@ -201,6 +201,8 @@ export const EXPECTED_COLUMN_NULLABILITY: readonly ColumnContract[] = [
   { table: 'spaces', column: 'owner_id', nullable: false },
   { table: 'spaces', column: 'version', nullable: false },
   { table: 'surfaces', column: 'version', nullable: false },
+  { table: 'surfaces', column: 'spawn_count', nullable: false },
+  { table: 'surfaces', column: 'recent_spawn_columns', nullable: false },
   { table: 'surface_objects', column: 'version', nullable: false },
   { table: 'surface_objects', column: 'created_by_user_id', nullable: false },
   { table: 'space_members', column: 'role', nullable: false },

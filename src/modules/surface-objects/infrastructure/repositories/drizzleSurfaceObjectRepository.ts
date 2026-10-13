@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, lt } from 'drizzle-orm';
+import { and, asc, eq, lt, sql } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
-import { surfaceObjects } from '@/database/schema';
+import { surfaceObjects, surfaces } from '@/database/schema';
 import type { SpaceId } from '@/modules/spaces/domain/value-objects/SpacePermission';
 import type { SurfaceId } from '@/modules/surfaces/domain/value-objects/SurfaceId';
 import { toUserId } from '@/modules/users/domain/value-objects/UserId';
@@ -15,12 +15,14 @@ import type {
 } from '../../domain/entities/SurfaceObject';
 import type {
   InsertSurfaceObjectInput,
+  SurfaceCellSelector,
   SurfaceObjectRepository,
 } from '../../domain/repositories/SurfaceObjectRepository';
 import type { Cell } from '../../domain/value-objects/Cell';
 import type { SurfaceObjectState } from '../../domain/value-objects/SurfaceObjectState';
 
 type ObjectRow = typeof surfaceObjects.$inferSelect;
+type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 
 /** Postgres error code for a unique constraint violation. */
 const UNIQUE_VIOLATION = '23505';
@@ -94,6 +96,21 @@ export class DrizzleSurfaceObjectRepository implements SurfaceObjectRepository {
     }
   }
 
+  async insertAtNextCell(
+    input: Omit<InsertSurfaceObjectInput, 'cell'>,
+    maxObjects: number,
+    selectCell: SurfaceCellSelector,
+  ): Promise<SurfaceObject | null> {
+    try {
+      return await this.db.transaction((tx) => insertAtNextCell(tx, input, maxObjects, selectCell));
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictError('Ячейка уже занята', { surfaceId: input.surfaceId });
+      }
+      throw error;
+    }
+  }
+
   async update(object: SurfaceObject, expectedVersion: number): Promise<SurfaceObject> {
     const [row] = await this.db
       .update(surfaceObjects)
@@ -118,12 +135,20 @@ export class DrizzleSurfaceObjectRepository implements SurfaceObjectRepository {
   }
 
   async delete(id: SurfaceObjectId, expectedVersion: number): Promise<void> {
-    const rows = await this.db
-      .delete(surfaceObjects)
-      .where(and(eq(surfaceObjects.id, id), eq(surfaceObjects.version, expectedVersion)))
-      .returning({ id: surfaceObjects.id });
+    const deleted = await this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .delete(surfaceObjects)
+        .where(and(eq(surfaceObjects.id, id), eq(surfaceObjects.version, expectedVersion)))
+        .returning({ surfaceId: surfaceObjects.surfaceId });
+      if (row === undefined) return false;
+      await tx
+        .update(surfaces)
+        .set({ version: sql`${surfaces.version} + 1` })
+        .where(eq(surfaces.id, row.surfaceId));
+      return true;
+    });
 
-    if (rows.length === 0) {
+    if (!deleted) {
       throw new ConflictError('Объект был изменён или уже удалён', {
         objectId: id,
         expectedVersion,
@@ -141,6 +166,80 @@ export class DrizzleSurfaceObjectRepository implements SurfaceObjectRepository {
 
     return rows.map(toSurfaceObject);
   }
+}
+
+async function insertAtNextCell(
+  tx: Transaction,
+  input: Omit<InsertSurfaceObjectInput, 'cell'>,
+  maxObjects: number,
+  selectCell: SurfaceCellSelector,
+): Promise<SurfaceObject | null> {
+  const surface = await lockSurface(tx, input.surfaceId);
+  const occupied = await listOccupiedCells(tx, input.surfaceId);
+  if (occupied.length >= maxObjects) return null;
+  const cell = selectCell({
+    generation: surface.spawnCount + 1,
+    occupied,
+    recentColumns: surface.recentSpawnColumns,
+  });
+  const object = await insertObject(tx, input, cell);
+  await advanceSpawnState(tx, input.surfaceId, cell.x, surface.recentSpawnColumns);
+  return object;
+}
+
+async function lockSurface(tx: Transaction, surfaceId: SurfaceId) {
+  const [surface] = await tx
+    .select({
+      spawnCount: surfaces.spawnCount,
+      recentSpawnColumns: surfaces.recentSpawnColumns,
+    })
+    .from(surfaces)
+    .where(eq(surfaces.id, surfaceId))
+    .for('update');
+  if (surface === undefined) throw new InfrastructureError('Поверхность не найдена', { surfaceId });
+  return surface;
+}
+
+async function listOccupiedCells(tx: Transaction, surfaceId: SurfaceId): Promise<Cell[]> {
+  const rows = await tx
+    .select({ x: surfaceObjects.cellX, y: surfaceObjects.cellY })
+    .from(surfaceObjects)
+    .where(eq(surfaceObjects.surfaceId, surfaceId));
+  return rows.map((row) => ({ x: row.x, y: row.y }));
+}
+
+async function insertObject(
+  tx: Transaction,
+  input: Omit<InsertSurfaceObjectInput, 'cell'>,
+  cell: Cell,
+): Promise<SurfaceObject> {
+  const [row] = await tx
+    .insert(surfaceObjects)
+    .values({
+      ...input,
+      cellX: cell.x,
+      cellY: cell.y,
+      pixelObjectId: input.pixelObjectId ?? null,
+    })
+    .returning();
+  if (row === undefined) throw new InfrastructureError('Не удалось создать объект');
+  return toSurfaceObject(row);
+}
+
+async function advanceSpawnState(
+  tx: Transaction,
+  surfaceId: SurfaceId,
+  column: number,
+  recentColumns: readonly number[],
+): Promise<void> {
+  await tx
+    .update(surfaces)
+    .set({
+      spawnCount: sql`${surfaces.spawnCount} + 1`,
+      recentSpawnColumns: [...recentColumns, column].slice(-3),
+      version: sql`${surfaces.version} + 1`,
+    })
+    .where(eq(surfaces.id, surfaceId));
 }
 
 function isUniqueViolation(error: unknown): boolean {

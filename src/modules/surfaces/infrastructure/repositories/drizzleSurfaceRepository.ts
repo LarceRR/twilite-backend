@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { surfaces } from '@/database/schema';
 import type { SpaceId } from '@/modules/spaces/domain/value-objects/SpacePermission';
-import { InfrastructureError, NotFoundError } from '@/shared/errors';
+import { InfrastructureError } from '@/shared/errors';
 
 import type { Surface } from '../../domain/entities/Surface';
 import type { SurfaceRepository } from '../../domain/repositories/SurfaceRepository';
@@ -45,20 +45,6 @@ export class DrizzleSurfaceRepository implements SurfaceRepository {
     }
 
     return existing;
-  }
-
-  async touch(id: SurfaceId): Promise<Surface> {
-    const [row] = await this.db
-      .update(surfaces)
-      .set({ version: sql`${surfaces.version} + 1` })
-      .where(eq(surfaces.id, id))
-      .returning();
-
-    if (row === undefined) {
-      throw new NotFoundError('Поверхность не найдена', { surfaceId: id });
-    }
-
-    return toSurface(row);
   }
 }
 

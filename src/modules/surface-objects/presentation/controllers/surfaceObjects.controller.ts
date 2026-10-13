@@ -60,7 +60,7 @@ export class SurfaceObjectsController {
   @RequirePermission('surfaceObject.create')
   @ApiOperation({
     summary: 'Поставить объект на поверхность',
-    description: 'Клиент не передаёт координаты: ячейку выбирает SpawnNearExistingPolicy.',
+    description: 'Клиент не передаёт координаты: сервер выбирает свободную активную ячейку.',
   })
   @ApiOkResponse({ type: SurfaceObjectResponseDto })
   async create(
