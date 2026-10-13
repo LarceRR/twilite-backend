@@ -10,12 +10,6 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
-
-import {
-  GroupsService,
-  PermissionsAdminService,
-  UserRbacService,
-} from '../../application/services/rbacAdmin.services';
 import {
   adminGroupSchema,
   adminPermissionSchema,
@@ -26,6 +20,11 @@ import {
 } from '@/shared/contracts/rbac.contract';
 import { RequireRbac } from '@/shared/decorators/rbac.decorators';
 import { AdminPanelGuard } from '@/shared/guards/adminPanel.guard';
+import {
+  GroupsService,
+  PermissionsAdminService,
+  UserRbacService,
+} from '../../application/services/rbacAdmin.services';
 
 class UpdateGroupDto extends createZodDto(updateGroupRequestSchema) {}
 class SetUserPermissionsDto extends createZodDto(setUserPermissionsRequestSchema) {}

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { ConfigModule } from '@/config/config.module';
 import { RedisModule } from '@/infrastructure/redis/redis.module';
-
+import { AdminPanelGuard } from '@/shared/guards/adminPanel.guard';
 import { EffectivePermissionsService } from './application/services/effectivePermissions.service';
 import {
   GroupsService,
@@ -19,7 +19,6 @@ import {
   AdminUsersController,
 } from './presentation/controllers/admin.controller';
 import { RbacSeedService } from './seed/rbacSeed.service';
-import { AdminPanelGuard } from '@/shared/guards/adminPanel.guard';
 
 @Module({
   imports: [ConfigModule, RedisModule],

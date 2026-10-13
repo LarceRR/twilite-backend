@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-
+import { type AppLimits, LIMITS } from '@/config/limits';
+import { UserRbacService } from '@/modules/rbac/application/services/rbacAdmin.services';
 import { CreateSpaceHandler } from '@/modules/spaces/application/commands/createSpace.handler';
 import {
   SPACE_REPOSITORY,
   type SpaceRepository,
 } from '@/modules/spaces/domain/repositories/SpaceRepository';
-import { UserRbacService } from '@/modules/rbac/application/services/rbacAdmin.services';
 import type { User } from '@/modules/users/domain/entities/User';
 import {
   USER_REPOSITORY,
@@ -13,7 +13,6 @@ import {
 } from '@/modules/users/domain/repositories/UserRepository';
 import { toEmail } from '@/modules/users/domain/value-objects/Email';
 import type { UserId } from '@/modules/users/domain/value-objects/UserId';
-import { type AppLimits, LIMITS } from '@/config/limits';
 import type { AuthSessionDto, DeviceInfoDto } from '@/shared/contracts/auth.contract';
 import { AuthenticationError, ConflictError } from '@/shared/errors';
 
@@ -165,7 +164,9 @@ export class AuthenticateHandler {
       return;
     }
 
-    const oldest = [...active].sort((left, right) => left.lastUsedAt.getTime() - right.lastUsedAt.getTime());
+    const oldest = [...active].sort(
+      (left, right) => left.lastUsedAt.getTime() - right.lastUsedAt.getTime(),
+    );
 
     for (const session of oldest.slice(0, overflow)) {
       await this.sessions.revoke(session.id);

@@ -20,6 +20,7 @@ export type InsertSurfaceObjectInput = {
   readonly createdByUserId: UserId;
   readonly subjectUserId: UserId;
   readonly metadata: SurfaceObjectMetadata;
+  readonly pixelObjectId?: string | null;
 };
 
 export interface SurfaceObjectRepository {

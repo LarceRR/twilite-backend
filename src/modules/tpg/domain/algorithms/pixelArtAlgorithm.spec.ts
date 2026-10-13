@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ValidationError } from '@/shared/errors';
 
-import {
-  DEFAULT_PIXEL_ART_ALGORITHM,
-  normalizeAlgorithm,
-} from './pixelArtAlgorithm';
+import { DEFAULT_PIXEL_ART_ALGORITHM, normalizeAlgorithm } from './pixelArtAlgorithm';
 
 describe('normalizeAlgorithm', () => {
   it('возвращает quantize по умолчанию', () => {

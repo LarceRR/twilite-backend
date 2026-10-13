@@ -35,6 +35,7 @@ export type SurfaceObject = {
   readonly subjectUserId: UserId;
   readonly metadata: SurfaceObjectMetadata;
   readonly favorite: boolean;
+  readonly pixelObjectId: string | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly version: number;

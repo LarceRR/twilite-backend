@@ -185,7 +185,10 @@ export class QrLoginHandler {
 
     const challenge = await this.loadByLoginToken(command.token);
     this.assertUsable(challenge);
-    this.assertOwnedBy(challenge.status === 'pending' ? { ...challenge, scannedByUserId: null } : challenge, command.userId);
+    this.assertOwnedBy(
+      challenge.status === 'pending' ? { ...challenge, scannedByUserId: null } : challenge,
+      command.userId,
+    );
 
     if (challenge.status === 'approved' || challenge.status === 'consumed') {
       throw alreadyUsed();
@@ -229,9 +232,16 @@ export class QrLoginHandler {
   async deny(command: QrTokenCommand): Promise<QrLoginDecisionResponseDto> {
     const challenge = await this.loadByLoginToken(command.token);
     this.assertUsable(challenge);
-    this.assertOwnedBy(challenge.status === 'pending' ? { ...challenge, scannedByUserId: null } : challenge, command.userId);
+    this.assertOwnedBy(
+      challenge.status === 'pending' ? { ...challenge, scannedByUserId: null } : challenge,
+      command.userId,
+    );
 
-    if (challenge.status === 'approved' || challenge.status === 'consumed' || challenge.status === 'denied') {
+    if (
+      challenge.status === 'approved' ||
+      challenge.status === 'consumed' ||
+      challenge.status === 'denied'
+    ) {
       throw alreadyUsed();
     }
 
@@ -278,7 +288,11 @@ export class QrLoginHandler {
       throw invalidToken();
     }
 
-    if (challenge.status === 'approved' || challenge.status === 'consumed' || challenge.status === 'denied') {
+    if (
+      challenge.status === 'approved' ||
+      challenge.status === 'consumed' ||
+      challenge.status === 'denied'
+    ) {
       throw alreadyUsed();
     }
 

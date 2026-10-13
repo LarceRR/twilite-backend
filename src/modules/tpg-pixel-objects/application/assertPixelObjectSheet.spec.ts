@@ -90,6 +90,7 @@ describe('mobile DTO', () => {
   const dto = toPixelObjectMobileDto({
     id: '22222222-2222-4222-8222-222222222222',
     title: 'Spark',
+    objectType: 'Bad',
     sheetUrl: 'https://cdn.example/sheet.png',
     manifest: manifest(),
   });

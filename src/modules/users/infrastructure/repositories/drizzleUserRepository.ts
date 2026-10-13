@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { userCredentials, userPreferences, users } from '@/database/schema';
+import { publicAvatarUrl } from '@/modules/media/domain/mediaApiPath';
 import { InfrastructureError, NotFoundError } from '@/shared/errors';
 
 import {
@@ -172,7 +173,7 @@ function toUser(row: UserRow, preferences: PreferencesRow | null): User {
     id: toUserId(row.id),
     email: row.email as Email,
     displayName: row.displayName,
-    avatarUrl: row.avatarUrl,
+    avatarUrl: publicAvatarUrl(row.id, row.avatarUrl, row.avatarStorageKey),
     createdAt: row.createdAt,
     preferences:
       preferences === null

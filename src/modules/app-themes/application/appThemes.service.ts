@@ -4,12 +4,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
 import { appThemes, users } from '@/database/schema';
 import type { AppThemeDto, SubmitAppThemeDto } from '@/shared/contracts/appThemes.contract';
-import {
-  AuthorizationError,
-  ConflictError,
-  NotFoundError,
-  ValidationError,
-} from '@/shared/errors';
+import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from '@/shared/errors';
 
 import { assertThemePendingForReview } from './assertThemePendingForReview';
 
@@ -93,11 +88,7 @@ export class AppThemesService {
     return toDto(row, author);
   }
 
-  async resubmit(
-    authorUserId: string,
-    id: string,
-    input: SubmitAppThemeDto,
-  ): Promise<AppThemeDto> {
+  async resubmit(authorUserId: string, id: string, input: SubmitAppThemeDto): Promise<AppThemeDto> {
     const existing = await this.requireOwned(id, authorUserId);
     if (existing.status !== 'rejected') {
       throw new ConflictError('Редактировать можно только отклонённую тему', {

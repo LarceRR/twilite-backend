@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -9,9 +10,11 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { AppConfig } from '@/config/env';
 import { InfrastructureError } from '@/shared/errors';
 
+import { assertHeadWithinLimit, readBodyWithByteLimit } from './boundedGetObject';
 import {
   IMMUTABLE_OBJECT_CACHE_CONTROL,
   type PresignedUpload,
+  type StorageObjectHead,
   type StoragePort,
 } from './StoragePort';
 
@@ -88,16 +91,55 @@ export class R2Storage implements StoragePort {
     return `${this.config.publicUrl.replace(/\/$/, '')}/${key}`;
   }
 
-  async getObject(key: string): Promise<Buffer> {
+  async headObject(key: string): Promise<StorageObjectHead | null> {
+    const client = this.requireClient();
+    try {
+      const response = await client.send(
+        new HeadObjectCommand({ Bucket: this.config.bucket, Key: key }),
+      );
+      return {
+        exists: true,
+        contentLength: response.ContentLength ?? 0,
+        contentType: response.ContentType ?? null,
+      };
+    } catch (error) {
+      if (isNotFoundStorageError(error)) {
+        return null;
+      }
+      throw new InfrastructureError('Не удалось проверить файл в хранилище', { key }, error);
+    }
+  }
+
+  async getObject(key: string, options: { readonly maxBytes: number }): Promise<Buffer> {
+    const head = await this.headObject(key);
+    assertHeadWithinLimit(key, head, options.maxBytes);
+
     const client = this.requireClient();
     const response = await client.send(
       new GetObjectCommand({ Bucket: this.config.bucket, Key: key }),
     );
     if (response.Body === undefined) {
-      throw new InfrastructureError('Пустой файл в хранилище');
+      throw new InfrastructureError('Пустой файл в хранилище', { key });
     }
-    const bytes = await response.Body.transformToByteArray();
-    return Buffer.from(bytes);
+    const bytes = await readBodyWithByteLimit(response.Body, options.maxBytes, key);
+    return bytes;
+  }
+
+  async putObject(params: {
+    readonly key: string;
+    readonly body: Buffer;
+    readonly contentType: string;
+  }): Promise<void> {
+    const client = this.requireClient();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: this.config.bucket,
+        Key: params.key,
+        Body: params.body,
+        ContentType: params.contentType,
+        CacheControl: IMMUTABLE_OBJECT_CACHE_CONTROL,
+      }),
+    );
   }
 
   async delete(key: string): Promise<void> {
@@ -112,4 +154,19 @@ export class R2Storage implements StoragePort {
 
     return this.client;
   }
+}
+
+function isNotFoundStorageError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+  const name = 'name' in error ? String(error.name) : '';
+  const status =
+    '$metadata' in error &&
+    typeof error.$metadata === 'object' &&
+    error.$metadata !== null &&
+    'httpStatusCode' in error.$metadata
+      ? Number(error.$metadata.httpStatusCode)
+      : undefined;
+  return name === 'NotFound' || name === 'NoSuchKey' || status === 404;
 }

@@ -53,4 +53,25 @@ describe('контракт схемы соответствует миграци�
 
     expect(new Set(names).size).toBe(names.length);
   });
+
+  it('миграция 0013 хранит тип объекта Good/Bad', () => {
+    expect(sql).toContain('ADD COLUMN "object_type" text DEFAULT \'Good\' NOT NULL');
+    expect(sql).toContain('"pixel_objects_object_type_check"');
+    expect(sql).toContain("\"object_type\" IN ('Good', 'Bad')");
+  });
+
+  it('миграция 0012 заводит ящик переназначения и возвращает архив в каталог', () => {
+    expect(sql).toContain('"is_reassignment_inbox" boolean DEFAULT false NOT NULL');
+    expect(sql).toContain('WHERE "status" = \'archived\'');
+    expect(sql).toContain('"status" = \'published\'');
+    expect(sql).toContain('Переназначенные');
+  });
+
+  it('миграция 0008 бэкфиллит ревизии и указатели head', () => {
+    expect(sql).toContain('INSERT INTO "pixel_object_revisions"');
+    expect(sql).toContain('SET "published_revision_id" = r."id"');
+    expect(sql).toContain('SET "pending_revision_id" = r."id"');
+    expect(sql).toContain('po."status" = \'published\'');
+    expect(sql).toContain("po.\"status\" IN ('pending', 'rejected')");
+  });
 });

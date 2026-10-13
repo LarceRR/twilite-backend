@@ -2,9 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
 import { REDIS_CLIENT } from '@/infrastructure/redis/redis.module';
-
-import type { QrLoginChallenge, QrLoginChallengePatch } from '../../domain/qrLogin/qrLoginChallenge';
-import type { QrLoginStatus } from '../../domain/qrLogin/qrLoginChallenge';
+import type {
+  QrLoginChallenge,
+  QrLoginChallengePatch,
+  QrLoginStatus,
+} from '../../domain/qrLogin/qrLoginChallenge';
 import type { QrLoginChallengeRepository } from '../../domain/repositories/QrLoginChallengeRepository';
 
 const CHALLENGE_PREFIX = 'auth:qr:challenge:';

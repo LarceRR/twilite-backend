@@ -24,6 +24,7 @@ import {
   type SurfaceObjectRepository,
 } from '../../domain/repositories/SurfaceObjectRepository';
 import { toSurfaceObjectDto } from '../mappers/surfaceObject.mapper';
+import { assertMetadataBindingImmutable } from '../pixelObjectBinding';
 
 export type UpdateSurfaceObjectCommand = {
   readonly objectId: SurfaceObjectId;
@@ -63,6 +64,7 @@ export class UpdateSurfaceObjectHandler {
     let next = current;
 
     if (command.metadata !== null) {
+      assertMetadataBindingImmutable(current.metadata, command.metadata);
       next = withMetadata(next, command.metadata, now);
     }
 

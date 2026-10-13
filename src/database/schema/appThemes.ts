@@ -2,11 +2,7 @@ import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-or
 
 import { users } from './users';
 
-export const appThemeStatusEnum = pgEnum('app_theme_status', [
-  'pending',
-  'published',
-  'rejected',
-]);
+export const appThemeStatusEnum = pgEnum('app_theme_status', ['pending', 'published', 'rejected']);
 
 export const appThemes = pgTable(
   'app_themes',

@@ -5,10 +5,9 @@ import { toUserId } from '@/modules/users/domain/value-objects/UserId';
 import { AuthenticationError, DomainError, ValidationError } from '@/shared/errors';
 import type { Clock } from '@/shared/utils/clock';
 import type { IdGenerator } from '@/shared/utils/id';
-
-import type { AuthRateLimiter } from '../services/authRateLimiter';
-import { MemoryQrChallengeRepository } from '../../infrastructure/repositories/memoryQrChallengeRepository';
 import { parseQrLoginPayload } from '../../domain/services/qrLoginTokens';
+import { MemoryQrChallengeRepository } from '../../infrastructure/repositories/memoryQrChallengeRepository';
+import type { AuthRateLimiter } from '../services/authRateLimiter';
 import type { AuthenticateHandler } from './authenticate.handler';
 import { QrLoginHandler } from './qrLogin.handler';
 
@@ -34,15 +33,17 @@ class MemoryRateLimiter implements AuthRateLimiter {
   }
 }
 
-function createHandler(options?: { clock?: Clock; ids?: IdGenerator; limiter?: MemoryRateLimiter }) {
+function createHandler(options?: {
+  clock?: Clock;
+  ids?: IdGenerator;
+  limiter?: MemoryRateLimiter;
+}) {
   const now = { value: new Date('2026-09-27T12:00:00.000Z') };
   const clock: Clock = options?.clock ?? { now: () => now.value };
   let sequence = 0;
-  const ids: IdGenerator =
-    options?.ids ??
-    {
-      next: () => `00000000-0000-4000-8000-${String(++sequence).padStart(12, '0')}`,
-    };
+  const ids: IdGenerator = options?.ids ?? {
+    next: () => `00000000-0000-4000-8000-${String(++sequence).padStart(12, '0')}`,
+  };
   const limiter = options?.limiter ?? new MemoryRateLimiter();
   const issueSession = vi.fn().mockResolvedValue({
     accessToken: 'access.jwt',
@@ -86,7 +87,9 @@ describe('QrLoginHandler', () => {
       ip: '203.0.113.10',
     });
 
-    expect(await handler.poll({ challengeId: started.challengeId, pollToken: started.pollToken })).toEqual({
+    expect(
+      await handler.poll({ challengeId: started.challengeId, pollToken: started.pollToken }),
+    ).toEqual({
       status: 'pending',
     });
 
@@ -96,7 +99,9 @@ describe('QrLoginHandler', () => {
     expect(preview).not.toHaveProperty('email');
     expect(preview).not.toHaveProperty('userId');
 
-    expect(await handler.poll({ challengeId: started.challengeId, pollToken: started.pollToken })).toEqual({
+    expect(
+      await handler.poll({ challengeId: started.challengeId, pollToken: started.pollToken }),
+    ).toEqual({
       status: 'scanned',
     });
 
@@ -135,7 +140,7 @@ describe('QrLoginHandler', () => {
 
     const hijack = await handler.poll({
       challengeId: started.challengeId,
-      pollToken: started.pollToken.slice(0, -2) + 'aa',
+      pollToken: `${started.pollToken.slice(0, -2)}aa`,
     });
 
     expect(hijack).toEqual({ status: 'expired' });
@@ -154,12 +159,12 @@ describe('QrLoginHandler', () => {
     const started = await handler.start({ device: null, ip: '10.0.0.1' });
     await handler.inspect({ userId: userA, token: started.qrPayload });
 
-    await expect(handler.inspect({ userId: userB, token: started.qrPayload })).rejects.toBeInstanceOf(
-      DomainError,
-    );
-    await expect(handler.approve({ userId: userB, token: started.qrPayload })).rejects.toBeInstanceOf(
-      DomainError,
-    );
+    await expect(
+      handler.inspect({ userId: userB, token: started.qrPayload }),
+    ).rejects.toBeInstanceOf(DomainError);
+    await expect(
+      handler.approve({ userId: userB, token: started.qrPayload }),
+    ).rejects.toBeInstanceOf(DomainError);
   });
 
   it('отклоняет повторное подтверждение и просроченный токен', async () => {
@@ -167,18 +172,20 @@ describe('QrLoginHandler', () => {
     const started = await handler.start({ device: null, ip: '10.0.0.1' });
     await handler.approve({ userId: userA, token: started.qrPayload });
 
-    await expect(handler.approve({ userId: userA, token: started.qrPayload })).rejects.toBeInstanceOf(
-      DomainError,
-    );
+    await expect(
+      handler.approve({ userId: userA, token: started.qrPayload }),
+    ).rejects.toBeInstanceOf(DomainError);
 
     now.value = new Date('2026-09-27T12:00:31.000Z');
     const expired = await handler.start({ device: null, ip: '10.0.0.2' });
     now.value = new Date('2026-09-27T12:01:10.000Z');
 
-    await expect(handler.inspect({ userId: userA, token: expired.qrPayload })).rejects.toBeInstanceOf(
-      DomainError,
-    );
-    expect(await handler.poll({ challengeId: expired.challengeId, pollToken: expired.pollToken })).toEqual({
+    await expect(
+      handler.inspect({ userId: userA, token: expired.qrPayload }),
+    ).rejects.toBeInstanceOf(DomainError);
+    expect(
+      await handler.poll({ challengeId: expired.challengeId, pollToken: expired.pollToken }),
+    ).toEqual({
       status: 'expired',
     });
   });
@@ -191,7 +198,9 @@ describe('QrLoginHandler', () => {
       status: 'denied',
     });
 
-    expect(await handler.poll({ challengeId: started.challengeId, pollToken: started.pollToken })).toEqual({
+    expect(
+      await handler.poll({ challengeId: started.challengeId, pollToken: started.pollToken }),
+    ).toEqual({
       status: 'denied',
     });
     expect(issueSession).not.toHaveBeenCalled();
@@ -204,7 +213,10 @@ describe('QrLoginHandler', () => {
       AuthenticationError,
     );
     await expect(
-      handler.inspect({ userId: userA, token: 'twilite://login?v=1&token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }),
+      handler.inspect({
+        userId: userA,
+        token: 'twilite://login?v=1&token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      }),
     ).rejects.toBeInstanceOf(AuthenticationError);
   });
 
@@ -216,6 +228,8 @@ describe('QrLoginHandler', () => {
       await handler.start({ device: null, ip: '198.51.100.9' });
     }
 
-    await expect(handler.start({ device: null, ip: '198.51.100.9' })).rejects.toBeInstanceOf(ValidationError);
+    await expect(handler.start({ device: null, ip: '198.51.100.9' })).rejects.toBeInstanceOf(
+      ValidationError,
+    );
   });
 });

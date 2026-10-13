@@ -31,8 +31,18 @@ export class ValidationError extends AppError {
 /** A domain invariant was violated (e.g. an illegal state transition). */
 export class DomainError extends AppError {
   readonly kind: AppErrorKind = 'domain';
-  readonly code = ErrorCode.DOMAIN_RULE_VIOLATION;
-  readonly httpStatus = 422;
+  readonly code: ErrorCode;
+  readonly httpStatus: number;
+
+  constructor(
+    message: string,
+    context: ErrorContext = {},
+    options: { readonly code?: ErrorCode; readonly httpStatus?: number } = {},
+  ) {
+    super(message, context);
+    this.code = options.code ?? ErrorCode.DOMAIN_RULE_VIOLATION;
+    this.httpStatus = options.httpStatus ?? 422;
+  }
 }
 
 /** Something outside the process failed: database, cache, queue, storage. */

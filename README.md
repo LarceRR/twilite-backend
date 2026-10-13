@@ -10,7 +10,7 @@ cp .env.example .env          # copy .env.example .env — на Windows
 docker compose up -d postgres redis
 npm ci
 npm run db:migrate
-npm run db:seed               # тестовые данные: anna@twilite.dev / twilite-dev-password
+npm run db:seed               # админ: twilite@app.ru / twilite-dev-password
 npm run dev
 ```
 

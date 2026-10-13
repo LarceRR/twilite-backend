@@ -1,4 +1,8 @@
-import type { QrLoginChallenge, QrLoginChallengePatch, QrLoginStatus } from '../qrLogin/qrLoginChallenge';
+import type {
+  QrLoginChallenge,
+  QrLoginChallengePatch,
+  QrLoginStatus,
+} from '../qrLogin/qrLoginChallenge';
 
 export interface QrLoginChallengeRepository {
   create(challenge: QrLoginChallenge, ttlSeconds: number): Promise<void>;

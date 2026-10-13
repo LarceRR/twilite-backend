@@ -1,22 +1,31 @@
+import { sql } from 'drizzle-orm';
 import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { mediaAssets } from './media';
+import { tpgProjects } from './tpgProjects';
 import { users } from './users';
 
 export const pixelObjectStatusEnum = pgEnum('pixel_object_status', [
   'pending',
   'published',
   'rejected',
+  'archived',
 ]);
 
 export const pixelObjects = pgTable(
   'pixel_objects',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => tpgProjects.id, { onDelete: 'restrict' }),
     authorUserId: uuid('author_user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
+    /** Good / Bad. Chosen before the sprite exists; kept through publish. */
+    objectType: text('object_type').notNull().default('Good'),
+    /** Dual-write head fields until P2-S2 cuts over reads to revisions. */
     manifest: jsonb('manifest').notNull(),
     sheetMediaId: uuid('sheet_media_id')
       .notNull()
@@ -28,11 +37,19 @@ export const pixelObjects = pgTable(
       onDelete: 'set null',
     }),
     reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    /** Live published revision pointer (ADR-003). FK added in migration 0008. */
+    publishedRevisionId: uuid('published_revision_id'),
+    /** Current pending/rejected revision under review. FK added in migration 0008. */
+    pendingRevisionId: uuid('pending_revision_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index('pixel_objects_status_created_idx').on(table.status, table.createdAt),
     index('pixel_objects_author_idx').on(table.authorUserId, table.updatedAt),
+    index('pixel_objects_project_created_idx').on(table.projectId, table.createdAt),
+    index('pixel_objects_catalog_type_idx')
+      .on(table.objectType, table.projectId)
+      .where(sql`${table.publishedRevisionId} is not null and ${table.status} <> 'archived'`),
   ],
 );

@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
+import { toUserId } from '@/modules/users/domain/value-objects/UserId';
 import type { AuthSessionDto } from '@/shared/contracts/auth.contract';
 import { AuthenticationError } from '@/shared/errors';
-import { toUserId } from '@/modules/users/domain/value-objects/UserId';
 
-import type { Session, SessionId, SessionRepository } from '../../domain/repositories/SessionRepository';
+import type {
+  Session,
+  SessionId,
+  SessionRepository,
+} from '../../domain/repositories/SessionRepository';
 import type { TokenService } from '../services/token.service';
 import { RefreshSessionHandler } from './refreshSession.handler';
 
@@ -54,7 +57,9 @@ describe('RefreshSessionHandler', () => {
 
   it('ротирует текущий refresh и кладёт пару в grace-cache', async () => {
     sessions.findById.mockResolvedValue(activeSession({ refreshTokenHash: 'hash:current' }));
-    sessions.rotateIfHashMatches.mockResolvedValue(activeSession({ refreshTokenHash: 'hash:next' }));
+    sessions.rotateIfHashMatches.mockResolvedValue(
+      activeSession({ refreshTokenHash: 'hash:next' }),
+    );
 
     const result = await handler.execute(`${SESSION_ID}.current`);
 
@@ -80,9 +85,7 @@ describe('RefreshSessionHandler', () => {
     sessions.rotateIfHashMatches.mockResolvedValue(null);
     redis.get
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(
-        JSON.stringify({ previousHash: 'hash:current', session: issued }),
-      );
+      .mockResolvedValueOnce(JSON.stringify({ previousHash: 'hash:current', session: issued }));
 
     const result = await handler.execute(`${SESSION_ID}.current`);
 
@@ -103,9 +106,7 @@ describe('RefreshSessionHandler', () => {
       hash: 'hash:previous',
     });
     sessions.findById.mockResolvedValue(activeSession({ refreshTokenHash: 'hash:current' }));
-    redis.get.mockResolvedValue(
-      JSON.stringify({ previousHash: 'hash:previous', session: issued }),
-    );
+    redis.get.mockResolvedValue(JSON.stringify({ previousHash: 'hash:previous', session: issued }));
 
     const result = await handler.execute(`${SESSION_ID}.previous`);
 

@@ -48,8 +48,16 @@ function isBlockedHost(hostname: string): boolean {
     if (a === 192 && b === 168) return true;
   }
 
-  // Common IPv6 ULA / link-local prefixes (string check; enough for SSRF basics)
-  if (host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe80')) {
+  // Common IPv6 ULA / link-local / loopback (string prefix + expanded forms)
+  if (
+    host === '::' ||
+    host.startsWith('fc') ||
+    host.startsWith('fd') ||
+    host.startsWith('fe80') ||
+    host.startsWith('::ffff:127.') ||
+    host.startsWith('::ffff:10.') ||
+    host.startsWith('::ffff:192.168.')
+  ) {
     return true;
   }
 

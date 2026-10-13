@@ -21,5 +21,7 @@ describe('assertHttpImageUrl', () => {
     expect(() => assertHttpImageUrl('http://192.168.0.1/a.png')).toThrow(ValidationError);
     expect(() => assertHttpImageUrl('http://10.0.0.5/a.png')).toThrow(ValidationError);
     expect(() => assertHttpImageUrl('http://169.254.169.254/latest')).toThrow(ValidationError);
+    expect(() => assertHttpImageUrl('http://[::1]/a.png')).toThrow(ValidationError);
+    expect(() => assertHttpImageUrl('http://[fe80::1]/a.png')).toThrow(ValidationError);
   });
 });

@@ -1,3 +1,4 @@
+import { pixelObjectMobileSchema } from '@twilite/contracts';
 import { z } from 'zod';
 
 import { surfaceObjectStates } from '@/modules/surface-objects/domain/value-objects/SurfaceObjectState';
@@ -28,6 +29,8 @@ export const surfaceObjectSchema = z.object({
   subjectUserId: uuidSchema,
   metadata: z.record(z.string(), z.unknown()),
   favorite: z.boolean(),
+  pixelObjectId: uuidSchema.nullable().optional(),
+  pixelObject: pixelObjectMobileSchema.nullable().optional(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
   version: versionSchema,
@@ -56,6 +59,7 @@ export const surfaceSnapshotSchema = z.object({
 export const createSurfaceObjectRequestSchema = z.object({
   kind: surfaceObjectKindSchema,
   subjectUserId: uuidSchema.optional(),
+  pixelObjectId: uuidSchema.optional(),
   metadata: z.record(z.string(), z.unknown()).default({}),
 });
 

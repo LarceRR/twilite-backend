@@ -55,7 +55,10 @@ export interface RbacRepository {
   listUserOverrides(userId: string): Promise<UserPermissionOverride[]>;
   setUserOverrides(
     userId: string,
-    overrides: readonly { readonly permissionId: string; readonly type: UserPermissionOverrideType }[],
+    overrides: readonly {
+      readonly permissionId: string;
+      readonly type: UserPermissionOverrideType;
+    }[],
   ): Promise<void>;
 
   listUserIdsWithPermissionAssignment(permissionId: string): Promise<string[]>;

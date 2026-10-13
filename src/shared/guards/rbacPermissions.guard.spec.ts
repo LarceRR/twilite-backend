@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Reflector } from '@nestjs/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EffectivePermissionsService } from '@/modules/rbac/application/services/effectivePermissions.service';
 import { AuthorizationError } from '@/shared/errors';

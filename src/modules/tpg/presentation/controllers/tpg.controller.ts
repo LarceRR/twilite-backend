@@ -1,20 +1,16 @@
 import { Body, Controller, Post, Req } from '@nestjs/common';
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
 import { createZodDto } from 'nestjs-zod';
 
 import {
-  type PixelateResponseDto,
   PIXEL_ART_ALGORITHMS,
+  type PixelateResponseDto,
   pixelateFromUrlRequestSchema,
   pixelateResponseSchema,
 } from '@/shared/contracts/tpg.contract';
+import { RequireRbac } from '@/shared/decorators/rbac.decorators';
 import { ValidationError } from '@/shared/errors';
 
 import { GeneratePixelArtHandler } from '../../application/commands/generatePixelArt.handler';
@@ -34,6 +30,8 @@ export class TpgController {
   constructor(private readonly generate: GeneratePixelArtHandler) {}
 
   @Post('pixelate/url')
+  @RequireRbac('tpg.pixelate.use')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Пикселизация изображения по прямому URL' })
   @ApiOkResponse({ type: PixelateResponseDtoClass })
   async pixelateFromUrl(@Body() body: PixelateFromUrlDto): Promise<PixelateResponseDto> {
@@ -46,6 +44,8 @@ export class TpgController {
   }
 
   @Post('pixelate/upload')
+  @RequireRbac('tpg.pixelate.use')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Пикселизация загруженного файла' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -101,18 +101,12 @@ async function readUpload(request: FastifyRequest): Promise<UploadParts> {
   };
 }
 
-function readOptionalString(
-  fields: Record<string, unknown>,
-  key: string,
-): string | undefined {
+function readOptionalString(fields: Record<string, unknown>, key: string): string | undefined {
   const raw = (fields[key] as { value?: string } | undefined)?.value;
   return raw === undefined || raw.length === 0 ? undefined : raw;
 }
 
-function readOptionalNumber(
-  fields: Record<string, unknown>,
-  key: string,
-): number | undefined {
+function readOptionalNumber(fields: Record<string, unknown>, key: string): number | undefined {
   const raw = readOptionalString(fields, key);
   if (raw === undefined) return undefined;
   const value = Number(raw);

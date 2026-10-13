@@ -19,6 +19,8 @@ export function toSurfaceObjectDto(object: SurfaceObject): SurfaceObjectDto {
     subjectUserId: object.subjectUserId,
     metadata: object.metadata,
     favorite: object.favorite,
+    pixelObjectId: object.pixelObjectId,
+    pixelObject: null,
     createdAt: object.createdAt.toISOString(),
     updatedAt: object.updatedAt.toISOString(),
     version: object.version,

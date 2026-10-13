@@ -75,6 +75,7 @@ export class SurfaceObjectsController {
       kind: body.kind,
       subjectUserId: (body.subjectUserId as UserId | undefined) ?? null,
       metadata: body.metadata,
+      ...(body.pixelObjectId !== undefined ? { pixelObjectId: body.pixelObjectId } : {}),
       idempotencyKey: idempotencyKey ?? null,
     });
     return toSurfaceObjectDto(object);

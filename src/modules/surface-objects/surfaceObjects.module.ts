@@ -1,5 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 
+import { ConfigModule } from '@/config/config.module';
 import { DrizzleModule } from '@/database/drizzle/drizzle.module';
 import { SpacesModule } from '@/modules/spaces/spaces.module';
 import { SurfacesModule } from '@/modules/surfaces/surfaces.module';
@@ -14,7 +15,12 @@ import { DrizzleSurfaceObjectRepository } from './infrastructure/repositories/dr
 import { SurfaceObjectsController } from './presentation/controllers/surfaceObjects.controller';
 
 @Module({
-  imports: [DrizzleModule, forwardRef(() => SpacesModule), forwardRef(() => SurfacesModule)],
+  imports: [
+    ConfigModule,
+    DrizzleModule,
+    forwardRef(() => SpacesModule),
+    forwardRef(() => SurfacesModule),
+  ],
   controllers: [SurfaceObjectsController],
   providers: [
     { provide: SURFACE_OBJECT_REPOSITORY, useClass: DrizzleSurfaceObjectRepository },
