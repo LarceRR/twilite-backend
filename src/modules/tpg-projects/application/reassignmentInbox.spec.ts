@@ -88,6 +88,7 @@ function createService(options: {
     {} as never,
     { warn: vi.fn() } as never,
     {} as never,
+    {} as never,
   );
   return { service, inserts, updates };
 }
