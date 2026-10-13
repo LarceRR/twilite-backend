@@ -4,6 +4,7 @@ import type { Cell } from '@/modules/surface-objects/domain/value-objects/Cell';
 import type { RandomSource } from '@/shared/utils/random';
 
 import {
+  ACTIVE_ROW_CENTER,
   COLUMN_COOLDOWN_MAX_X,
   COLUMN_COOLDOWN_SPAWNS,
   EDGE_ROWS_UNLOCK_GENERATION,
