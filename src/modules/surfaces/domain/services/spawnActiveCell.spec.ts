@@ -7,7 +7,6 @@ import {
   COLUMN_COOLDOWN_MAX_X,
   COLUMN_COOLDOWN_SPAWNS,
   EDGE_ROWS_UNLOCK_GENERATION,
-  FIRST_SPAWN_ROWS,
   FIRST_SPAWN_X,
   spawnActiveCell,
 } from './spawnActiveCell';
@@ -16,24 +15,34 @@ const firstChoice: RandomSource = { int: () => 0 };
 const lastChoice: RandomSource = { int: (max) => max - 1 };
 
 describe('spawnActiveCell', () => {
-  it('starts in column 3, in one of the requested three center rows', () => {
+  it('restarts from the center when all objects were deleted, even with an old generation', () => {
+    const cell = spawnActiveCell({
+      generation: 42,
+      occupied: [],
+      recentColumns: [2, 3, 4],
+      random: lastChoice,
+    });
+
+    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER });
+  });
+
+  it('starts at the canonical center cell (3, 8) regardless of randomness', () => {
     const cell = spawnActiveCell({
       generation: 1,
       occupied: [],
       recentColumns: [],
-      random: firstChoice,
+      random: lastChoice,
     });
 
-    expect(cell.x).toBe(FIRST_SPAWN_X);
-    expect(FIRST_SPAWN_ROWS).toContain(cell.y);
+    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER });
   });
 
   it('keeps the outer active rows closed through the first eight generations', () => {
     for (let generation = 1; generation < EDGE_ROWS_UNLOCK_GENERATION; generation += 1) {
       const cell = spawnActiveCell({
         generation,
-        occupied: [],
-        recentColumns: [],
+        occupied: [{ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER }],
+        recentColumns: [FIRST_SPAWN_X],
         random: lastChoice,
       });
       expect([6, 7, 8]).toContain(cell.y);
@@ -43,8 +52,8 @@ describe('spawnActiveCell', () => {
   it('allows the outer active rows starting with generation nine', () => {
     const cell = spawnActiveCell({
       generation: EDGE_ROWS_UNLOCK_GENERATION,
-      occupied: [],
-      recentColumns: [],
+      occupied: [{ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER }],
+      recentColumns: [FIRST_SPAWN_X],
       random: lastChoice,
     });
 
@@ -61,6 +70,7 @@ describe('spawnActiveCell', () => {
     });
 
     expect(cell.x).not.toBe(2);
+    expect(cell.x).toBeGreaterThanOrEqual(FIRST_SPAWN_X);
   });
 
   it('releases a column after it falls out of the three-spawn history', () => {

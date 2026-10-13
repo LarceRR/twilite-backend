@@ -6,7 +6,6 @@ export const ACTIVE_ROW_CENTER = 7;
 export const ACTIVE_ROW_EDGE = 2;
 export const ACTIVE_CELL_MIN_X = 0;
 export const FIRST_SPAWN_X = 2;
-export const FIRST_SPAWN_ROWS = [ACTIVE_ROW_CENTER - 1, ACTIVE_ROW_CENTER, ACTIVE_ROW_CENTER + 1];
 export const EDGE_ROWS_UNLOCK_GENERATION = 9;
 export const COLUMN_COOLDOWN_SPAWNS = 3;
 export const COLUMN_COOLDOWN_MAX_X = 5;
@@ -20,8 +19,10 @@ export function spawnActiveCell(params: {
   if (!Number.isInteger(params.generation) || params.generation < 1) {
     throw new DomainError('Номер генерации должен быть положительным целым числом');
   }
-  if (params.generation === 1) {
-    return firstSpawn(params.random);
+  // Current occupancy, not lifetime creation count, determines the initial placement.
+  // Deleting every object must restore the canonical first cell even if spawnCount is higher.
+  if (params.occupied.length === 0) {
+    return firstSpawn();
   }
 
   const rows = activeRows(params.generation);
@@ -37,10 +38,8 @@ export function spawnActiveCell(params: {
   });
 }
 
-function firstSpawn(random: RandomSource): Cell {
-  const row = FIRST_SPAWN_ROWS[random.int(FIRST_SPAWN_ROWS.length)];
-  if (row === undefined) throw new DomainError('Не удалось выбрать стартовый ряд');
-  return toCell(FIRST_SPAWN_X, row);
+function firstSpawn(): Cell {
+  return toCell(FIRST_SPAWN_X, ACTIVE_ROW_CENTER);
 }
 
 function activeRows(generation: number): readonly number[] {
@@ -60,7 +59,8 @@ function collectCandidates(
   coolingColumns: ReadonlySet<number>,
 ): readonly Cell[] {
   const candidates: Cell[] = [];
-  for (let x = ACTIVE_CELL_MIN_X; x <= maxColumn; x += 1) {
+  // The surface grows from its defined origin; never backfill cells to its left.
+  for (let x = Math.max(ACTIVE_CELL_MIN_X, FIRST_SPAWN_X); x <= maxColumn; x += 1) {
     if (x <= COLUMN_COOLDOWN_MAX_X && coolingColumns.has(x)) continue;
     for (const y of rows) {
       const cell = toCell(x, y);
