@@ -18,6 +18,7 @@ import {
 } from '@/shared/contracts/realtime.contract';
 import {
   domainEventNames,
+  type SurfaceClearedEvent,
   type SurfaceObjectCreatedEvent,
   type SurfaceObjectDeletedEvent,
   type SurfaceObjectStateChangedEvent,
@@ -114,6 +115,14 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       type: 'surfaceObject.deleted',
       spaceId: event.spaceId,
       objectId: event.objectId,
+    });
+  }
+
+  @OnEvent(domainEventNames.surfaceCleared)
+  onSurfaceCleared(event: SurfaceClearedEvent): void {
+    this.broadcast(event.spaceId as SpaceId, {
+      type: 'surface.cleared',
+      spaceId: event.spaceId,
     });
   }
 

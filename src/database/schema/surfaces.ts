@@ -25,6 +25,9 @@ export const surfaces = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     version: integer('version').notNull().default(1),
     spawnCount: integer('spawn_count').notNull().default(0),
+    activeObjectCount: integer('active_object_count').notNull().default(0),
+    lastSpawnX: integer('last_spawn_x'),
+    lastSpawnY: integer('last_spawn_y'),
     recentSpawnColumns: integer('recent_spawn_columns')
       .array()
       .notNull()
@@ -35,7 +38,7 @@ export const surfaces = pgTable(
     uniqueIndex('surfaces_space_unique').on(table.spaceId),
     check(
       'surfaces_spawn_state_check',
-      sql`${table.spawnCount} >= 0 AND cardinality(${table.recentSpawnColumns}) <= 3 AND 0 <= ALL(${table.recentSpawnColumns})`,
+      sql`${table.spawnCount} >= 0 AND ${table.activeObjectCount} >= 0 AND cardinality(${table.recentSpawnColumns}) <= 3 AND 0 <= ALL(${table.recentSpawnColumns})`,
     ),
   ],
 );

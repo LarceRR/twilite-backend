@@ -10,7 +10,13 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProperty,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { SpaceId } from '@/modules/spaces/domain/value-objects/SpacePermission';
 import type { UserId } from '@/modules/users/domain/value-objects/UserId';
 import type { KindPolicyDto, SurfaceObjectDto } from '@/shared/contracts/surface.contract';
@@ -23,6 +29,7 @@ import { ChangeSurfaceObjectStateHandler } from '../../application/commands/chan
 import { CreateSurfaceObjectHandler } from '../../application/commands/createSurfaceObject.handler';
 import { UpdateSurfaceObjectHandler } from '../../application/commands/updateSurfaceObject.handler';
 import { toSurfaceObjectDto } from '../../application/mappers/surfaceObject.mapper';
+import { SurfaceObjectDataHandler } from '../../application/surfaceObjectData.handler';
 import type { SurfaceObjectId } from '../../domain/entities/SurfaceObject';
 import { allKindPolicies } from '../../domain/value-objects/SurfaceObjectKind';
 import {
@@ -34,6 +41,17 @@ import {
   UpdateSurfaceObjectDto,
 } from '../dto/surfaceObject.dto';
 
+class SurfaceMomentStatsResponseDto {
+  @ApiProperty()
+  total!: number;
+
+  @ApiProperty()
+  good!: number;
+
+  @ApiProperty()
+  bad!: number;
+}
+
 @ApiTags('surface-objects')
 @Controller()
 export class SurfaceObjectsController {
@@ -41,6 +59,7 @@ export class SurfaceObjectsController {
     private readonly createHandler: CreateSurfaceObjectHandler,
     private readonly changeStateHandler: ChangeSurfaceObjectStateHandler,
     private readonly updateHandler: UpdateSurfaceObjectHandler,
+    private readonly dataHandler: SurfaceObjectDataHandler,
   ) {}
 
   @Get('surface-object-kinds')
@@ -54,6 +73,29 @@ export class SurfaceObjectsController {
       spawnRadius: policy.spawnRadius,
       minSeparation: policy.minSeparation,
     }));
+  }
+
+  @Get('spaces/:spaceId/surface-objects/stats')
+  @RequirePermission('surfaceObject.create')
+  @ApiOperation({ summary: 'Сводка моментов пространства' })
+  @ApiOkResponse({ type: SurfaceMomentStatsResponseDto })
+  momentStats(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('spaceId') spaceId: string,
+  ): Promise<SurfaceMomentStatsResponseDto> {
+    return this.dataHandler.getMomentStats(spaceId as SpaceId, user.userId);
+  }
+
+  @Delete('spaces/:spaceId/surface-objects')
+  @RequirePermission('surfaceObject.delete')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Удалить моменты и историю личного пространства' })
+  @ApiNoContentResponse()
+  async clearPersonalSpace(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('spaceId') spaceId: string,
+  ): Promise<void> {
+    await this.dataHandler.clearPersonalSpace(spaceId as SpaceId, user.userId);
   }
 
   @Post('spaces/:spaceId/surface-objects')

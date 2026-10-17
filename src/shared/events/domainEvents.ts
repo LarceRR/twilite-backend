@@ -11,6 +11,7 @@ export const domainEventNames = {
   surfaceObjectStateChanged: 'surfaceObject.stateChanged',
   surfaceObjectUpdated: 'surfaceObject.updated',
   surfaceObjectDeleted: 'surfaceObject.deleted',
+  surfaceCleared: 'surface.cleared',
   spaceCreated: 'space.created',
   spaceMemberJoined: 'space.memberJoined',
   invitationCreated: 'invitation.created',
@@ -45,6 +46,10 @@ export type SurfaceObjectDeletedEvent = {
   readonly actorUserId: string;
   readonly objectId: string;
   readonly kind: string;
+};
+
+export type SurfaceClearedEvent = {
+  readonly spaceId: string;
 };
 
 export type SpaceCreatedEvent = {

@@ -1,121 +1,147 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Cell } from '@/modules/surface-objects/domain/value-objects/Cell';
 import type { RandomSource } from '@/shared/utils/random';
 
 import {
   ACTIVE_ROW_CENTER,
-  COLUMN_COOLDOWN_MAX_X,
-  COLUMN_COOLDOWN_SPAWNS,
   EDGE_ROWS_UNLOCK_GENERATION,
+  EDGE_ROWS_UNLOCK_X,
   FIRST_SPAWN_X,
+  SPAWN_SEARCH_WINDOW_WIDTH,
   spawnActiveCell,
 } from './spawnActiveCell';
 
-const firstChoice: RandomSource = { int: () => 0 };
 const lastChoice: RandomSource = { int: (max) => max - 1 };
+const firstChoice: RandomSource = { int: () => 0 };
 
 describe('spawnActiveCell', () => {
-  it('restarts from the center when all objects were deleted, even with an old generation', () => {
-    const cell = spawnActiveCell({
-      generation: 42,
-      occupied: [],
-      recentColumns: [2, 3, 4],
-      random: lastChoice,
-    });
+  it('blocks cells within Manhattan distance four of an object', () => {
+    const object = { x: 2, y: 7 };
+    const isBlocked = (x: number, y: number) => isFalseCell({ x, y }, object);
 
-    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER });
+    expect(isBlocked(2, 7)).toBe(true);
+    expect(isBlocked(6, 7)).toBe(true);
+    expect(isBlocked(4, 9)).toBe(true);
+    expect(isBlocked(7, 7)).toBe(false);
+    expect(isBlocked(5, 10)).toBe(false);
+    expect(isBlocked(5, 9)).toBe(false);
   });
 
-  it('starts at the canonical center cell (3, 8) regardless of randomness', () => {
+  it('starts at the canonical center cell (2, 7) regardless of randomness', () => {
     const cell = spawnActiveCell({
       generation: 1,
-      occupied: [],
-      recentColumns: [],
+      activeObjectCount: 0,
+      lastSpawnX: null,
+      lastSpawnY: null,
+      occupiedCells: [],
       random: lastChoice,
     });
 
     expect(cell).toEqual({ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER });
   });
 
-  it('keeps the outer active rows closed through the first eight generations', () => {
-    for (let generation = 1; generation < EDGE_ROWS_UNLOCK_GENERATION; generation += 1) {
+  it('restarts at the canonical center when the surface is empty after prior spawns', () => {
+    const cell = spawnActiveCell({
+      generation: 42,
+      activeObjectCount: 0,
+      lastSpawnX: 12,
+      lastSpawnY: 8,
+      occupiedCells: [],
+      random: lastChoice,
+    });
+
+    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER });
+  });
+
+  it('can choose a free cell beyond the previous object, not only the next fixed column', () => {
+    const cell = spawnActiveCell({
+      generation: 2,
+      activeObjectCount: 1,
+      lastSpawnX: FIRST_SPAWN_X,
+      lastSpawnY: ACTIVE_ROW_CENTER,
+      occupiedCells: [{ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER }],
+      random: firstChoice,
+    });
+
+    expect(cell).toEqual({ x: FIRST_SPAWN_X + 4, y: ACTIVE_ROW_CENTER - 1 });
+  });
+
+  it('advances beyond prior objects and avoids all of their false cells', () => {
+    let lastSpawnX = FIRST_SPAWN_X;
+    let lastSpawnY = ACTIVE_ROW_CENTER;
+    const occupiedCells = [{ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER }];
+    for (let generation = 2; generation <= 5; generation += 1) {
       const cell = spawnActiveCell({
         generation,
-        occupied: [{ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER }],
-        recentColumns: [FIRST_SPAWN_X],
+        activeObjectCount: generation - 1,
+        lastSpawnX,
+        lastSpawnY,
+        occupiedCells,
         random: lastChoice,
       });
-      expect([6, 7, 8]).toContain(cell.y);
+      expect(cell.x).toBeGreaterThan(lastSpawnX);
+      expect(occupiedCells.some((occupied) => isFalseCell(cell, occupied))).toBe(false);
+      expect(occupiedCells).not.toContainEqual(cell);
+      occupiedCells.push(cell);
+      lastSpawnX = cell.x;
+      lastSpawnY = cell.y;
     }
   });
 
-  it('allows the outer active rows starting with generation nine', () => {
+  it('keeps the outer rows unavailable during the first three generations', () => {
+    let lastSpawnX: number | null = null;
+    let lastSpawnY: number | null = null;
+    const occupiedCells: { x: number; y: number }[] = [];
+    for (let generation = 1; generation < EDGE_ROWS_UNLOCK_GENERATION; generation += 1) {
+      const cell = spawnActiveCell({
+        generation,
+        activeObjectCount: generation - 1,
+        lastSpawnX,
+        lastSpawnY,
+        occupiedCells,
+        random: lastChoice,
+      });
+      expect([6, 7, 8]).toContain(cell.y);
+      occupiedCells.push(cell);
+      lastSpawnX = cell.x;
+      lastSpawnY = cell.y;
+    }
+  });
+
+  it('allows outer rows after three objects and when X exceeds eight', () => {
     const cell = spawnActiveCell({
       generation: EDGE_ROWS_UNLOCK_GENERATION,
-      occupied: [{ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER }],
-      recentColumns: [FIRST_SPAWN_X],
+      activeObjectCount: EDGE_ROWS_UNLOCK_GENERATION - 1,
+      lastSpawnX: EDGE_ROWS_UNLOCK_X,
+      lastSpawnY: ACTIVE_ROW_CENTER,
+      occupiedCells: [{ x: EDGE_ROWS_UNLOCK_X, y: ACTIVE_ROW_CENTER }],
       random: lastChoice,
     });
 
     expect([5, 9]).toContain(cell.y);
   });
 
-  it('does not reuse a recent column while it is within the first six columns', () => {
-    const occupied: Cell[] = [{ x: 2, y: 6 }];
+  it('keeps outer rows closed until X exceeds eight', () => {
     const cell = spawnActiveCell({
-      generation: 2,
-      occupied,
-      recentColumns: [2],
+      generation: EDGE_ROWS_UNLOCK_GENERATION,
+      activeObjectCount: EDGE_ROWS_UNLOCK_GENERATION - 1,
+      lastSpawnX: EDGE_ROWS_UNLOCK_X - SPAWN_SEARCH_WINDOW_WIDTH - 1,
+      lastSpawnY: ACTIVE_ROW_CENTER,
+      occupiedCells: [
+        { x: EDGE_ROWS_UNLOCK_X - SPAWN_SEARCH_WINDOW_WIDTH - 1, y: ACTIVE_ROW_CENTER },
+      ],
       random: firstChoice,
     });
 
-    expect(cell.x).not.toBe(2);
-    expect(cell.x).toBeGreaterThanOrEqual(FIRST_SPAWN_X);
-  });
-
-  it('releases a column after it falls out of the three-spawn history', () => {
-    const occupied: Cell[] = [];
-    for (let x = 0; x <= COLUMN_COOLDOWN_MAX_X; x += 1) {
-      for (let y = 5; y <= 9; y += 1) {
-        if (x !== 2 || y !== 6) occupied.push({ x, y });
-      }
-    }
-    const cell = spawnActiveCell({
-      generation: 10,
-      occupied,
-      recentColumns: [3, 4, 1],
-      random: firstChoice,
-    });
-
-    expect(cell).toEqual({ x: 2, y: 6 });
-  });
-
-  it('permits reuse after the three-spawn cooldown once x is greater than five', () => {
-    const occupied: Cell[] = [];
-    for (let x = 0; x <= COLUMN_COOLDOWN_MAX_X; x += 1) {
-      for (let y = 5; y <= 9; y += 1) occupied.push({ x, y });
-    }
-
-    const cell = spawnActiveCell({
-      generation: 9,
-      occupied,
-      recentColumns: [1, 4, 6].slice(-COLUMN_COOLDOWN_SPAWNS),
-      random: firstChoice,
-    });
-
-    expect(cell.x).toBe(6);
-  });
-
-  it('never returns an occupied cell', () => {
-    const occupied: Cell[] = [{ x: 2, y: 6 }];
-    const cell = spawnActiveCell({
-      generation: 2,
-      occupied,
-      recentColumns: [2],
-      random: lastChoice,
-    });
-
-    expect(occupied).not.toContainEqual(cell);
+    expect([6, 7, 8]).toContain(cell.y);
   });
 });
+
+function isFalseCell(
+  cell: { readonly x: number; readonly y: number },
+  object: { readonly x: number; readonly y: number },
+): boolean {
+  const deltaX = Math.abs(cell.x - object.x);
+  const deltaY = Math.abs(cell.y - object.y);
+  return deltaX + deltaY <= 4;
+}
