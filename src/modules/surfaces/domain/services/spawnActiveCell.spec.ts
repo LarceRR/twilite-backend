@@ -9,6 +9,7 @@ import {
   COLUMN_COOLDOWN_SPAWNS,
   EDGE_ROWS_UNLOCK_GENERATION,
   FIRST_SPAWN_X,
+  FIRST_SPAWN_Y,
   spawnActiveCell,
 } from './spawnActiveCell';
 
@@ -16,7 +17,7 @@ const firstChoice: RandomSource = { int: () => 0 };
 const lastChoice: RandomSource = { int: (max) => max - 1 };
 
 describe('spawnActiveCell', () => {
-  it('restarts from the center when all objects were deleted, even with an old generation', () => {
+  it('restarts at the first-spawn coordinate when all objects were deleted, even with an old generation', () => {
     const cell = spawnActiveCell({
       generation: 42,
       occupied: [],
@@ -24,10 +25,10 @@ describe('spawnActiveCell', () => {
       random: lastChoice,
     });
 
-    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER });
+    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: FIRST_SPAWN_Y });
   });
 
-  it('starts at the canonical center cell (3, 8) regardless of randomness', () => {
+  it('starts at (2, 4) regardless of randomness', () => {
     const cell = spawnActiveCell({
       generation: 1,
       occupied: [],
@@ -35,7 +36,7 @@ describe('spawnActiveCell', () => {
       random: lastChoice,
     });
 
-    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER });
+    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: FIRST_SPAWN_Y });
   });
 
   it('keeps the outer active rows closed through the first eight generations', () => {

@@ -6,6 +6,7 @@ export const ACTIVE_ROW_CENTER = 7;
 export const ACTIVE_ROW_EDGE = 2;
 export const ACTIVE_CELL_MIN_X = 0;
 export const FIRST_SPAWN_X = 2;
+export const FIRST_SPAWN_Y = 4;
 export const EDGE_ROWS_UNLOCK_GENERATION = 9;
 export const COLUMN_COOLDOWN_SPAWNS = 3;
 export const COLUMN_COOLDOWN_MAX_X = 5;
@@ -39,7 +40,7 @@ export function spawnActiveCell(params: {
 }
 
 function firstSpawn(): Cell {
-  return toCell(FIRST_SPAWN_X, ACTIVE_ROW_CENTER);
+  return toCell(FIRST_SPAWN_X, FIRST_SPAWN_Y);
 }
 
 function activeRows(generation: number): readonly number[] {
