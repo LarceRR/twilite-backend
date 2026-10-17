@@ -7,7 +7,11 @@ import {
   EDGE_ROWS_UNLOCK_GENERATION,
   EDGE_ROWS_UNLOCK_X,
   FIRST_SPAWN_X,
+<<<<<<< HEAD
   SPAWN_SEARCH_WINDOW_WIDTH,
+=======
+  FIRST_SPAWN_Y,
+>>>>>>> 918ec7516ac77b4fdf865c628a47967f25f6f1a7
   spawnActiveCell,
 } from './spawnActiveCell';
 
@@ -15,6 +19,7 @@ const lastChoice: RandomSource = { int: (max) => max - 1 };
 const firstChoice: RandomSource = { int: () => 0 };
 
 describe('spawnActiveCell', () => {
+<<<<<<< HEAD
   it('blocks cells within Manhattan distance four of an object', () => {
     const object = { x: 2, y: 7 };
     const isBlocked = (x: number, y: number) => isFalseCell({ x, y }, object);
@@ -28,6 +33,20 @@ describe('spawnActiveCell', () => {
   });
 
   it('starts at the canonical center cell (2, 7) regardless of randomness', () => {
+=======
+  it('restarts at the first-spawn coordinate when all objects were deleted, even with an old generation', () => {
+    const cell = spawnActiveCell({
+      generation: 42,
+      occupied: [],
+      recentColumns: [2, 3, 4],
+      random: lastChoice,
+    });
+
+    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: FIRST_SPAWN_Y });
+  });
+
+  it('starts at (2, 4) regardless of randomness', () => {
+>>>>>>> 918ec7516ac77b4fdf865c628a47967f25f6f1a7
     const cell = spawnActiveCell({
       generation: 1,
       activeObjectCount: 0,
@@ -37,7 +56,7 @@ describe('spawnActiveCell', () => {
       random: lastChoice,
     });
 
-    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: ACTIVE_ROW_CENTER });
+    expect(cell).toEqual({ x: FIRST_SPAWN_X, y: FIRST_SPAWN_Y });
   });
 
   it('restarts at the canonical center when the surface is empty after prior spawns', () => {
