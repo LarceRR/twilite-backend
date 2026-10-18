@@ -1,6 +1,6 @@
 import { ValidationError } from '@/shared/errors';
 
-/** A position on the surface grid. Integers only: the grid has no sub-cells. */
+/** Zero-based position on the surface grid; (2, 7) renders as X3,Y8. */
 export type Cell = {
   readonly x: number;
   readonly y: number;

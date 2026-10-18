@@ -60,6 +60,19 @@ describe('контракт схемы соответствует миграци�
     expect(sql).toContain("\"object_type\" IN ('Good', 'Bad')");
   });
 
+  it('миграция 0015 сохраняет поколения и последние колонки спавна', () => {
+    expect(sql).toContain('ADD COLUMN "spawn_count" integer DEFAULT 0 NOT NULL');
+    expect(sql).toContain('ADD COLUMN "recent_spawn_columns" integer[]');
+    expect(sql).toContain('"surfaces_spawn_state_check"');
+    expect(sql).toContain('ORDER BY object."created_at" DESC, object."id" DESC');
+  });
+
+  it('миграция 0016 сохраняет курсор спавна и число объектов', () => {
+    expect(sql).toContain('ADD COLUMN "active_object_count" integer DEFAULT 0 NOT NULL');
+    expect(sql).toContain('ADD COLUMN "last_spawn_x" integer');
+    expect(sql).toContain('ADD COLUMN "last_spawn_y" integer');
+  });
+
   it('миграция 0012 заводит ящик переназначения и возвращает архив в каталог', () => {
     expect(sql).toContain('"is_reassignment_inbox" boolean DEFAULT false NOT NULL');
     expect(sql).toContain('WHERE "status" = \'archived\'');

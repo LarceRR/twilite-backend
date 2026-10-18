@@ -9,6 +9,7 @@ import { IdempotencyService } from '@/shared/idempotency/idempotency.service';
 import { ChangeSurfaceObjectStateHandler } from './application/commands/changeSurfaceObjectState.handler';
 import { CreateSurfaceObjectHandler } from './application/commands/createSurfaceObject.handler';
 import { UpdateSurfaceObjectHandler } from './application/commands/updateSurfaceObject.handler';
+import { SurfaceObjectDataHandler } from './application/surfaceObjectData.handler';
 import { SURFACE_OBJECT_REPOSITORY } from './domain/repositories/SurfaceObjectRepository';
 import { SurfaceLifecycleProcessor } from './infrastructure/processors/surfaceLifecycle.processor';
 import { DrizzleSurfaceObjectRepository } from './infrastructure/repositories/drizzleSurfaceObjectRepository';
@@ -28,6 +29,7 @@ import { SurfaceObjectsController } from './presentation/controllers/surfaceObje
     CreateSurfaceObjectHandler,
     ChangeSurfaceObjectStateHandler,
     UpdateSurfaceObjectHandler,
+    SurfaceObjectDataHandler,
     SurfaceLifecycleProcessor,
   ],
   exports: [SURFACE_OBJECT_REPOSITORY],

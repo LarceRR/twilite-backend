@@ -36,6 +36,7 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     spaceId: uuidSchema,
     objectId: uuidSchema,
   }),
+  z.object({ type: z.literal('surface.cleared'), spaceId: uuidSchema }),
   z.object({
     type: z.literal('timeline.appended'),
     spaceId: uuidSchema,

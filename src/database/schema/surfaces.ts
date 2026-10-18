@@ -1,5 +1,7 @@
+import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -22,9 +24,23 @@ export const surfaces = pgTable(
       .references(() => spaces.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     version: integer('version').notNull().default(1),
+    spawnCount: integer('spawn_count').notNull().default(0),
+    activeObjectCount: integer('active_object_count').notNull().default(0),
+    lastSpawnX: integer('last_spawn_x'),
+    lastSpawnY: integer('last_spawn_y'),
+    recentSpawnColumns: integer('recent_spawn_columns')
+      .array()
+      .notNull()
+      .default(sql`'{}'::integer[]`),
   },
   // Exactly one surface per space.
-  (table) => [uniqueIndex('surfaces_space_unique').on(table.spaceId)],
+  (table) => [
+    uniqueIndex('surfaces_space_unique').on(table.spaceId),
+    check(
+      'surfaces_spawn_state_check',
+      sql`${table.spawnCount} >= 0 AND ${table.activeObjectCount} >= 0 AND cardinality(${table.recentSpawnColumns}) <= 3 AND 0 <= ALL(${table.recentSpawnColumns})`,
+    ),
+  ],
 );
 
 export const surfaceObjects = pgTable(
