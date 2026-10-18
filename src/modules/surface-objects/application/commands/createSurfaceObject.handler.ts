@@ -36,6 +36,9 @@ export type CreateSurfaceObjectCommand = {
 
 const MAX_CELL_ATTEMPTS = 5;
 
+// Placement stays implemented for later reactivation, but must not spawn objects during terrain work.
+const SURFACE_OBJECT_SPAWNING_ENABLED = false;
+
 @Injectable()
 export class CreateSurfaceObjectHandler {
   constructor(
@@ -83,6 +86,13 @@ export class CreateSurfaceObjectHandler {
       createdByUserId: command.createdByUserId,
       subjectUserId,
     });
+    if (!SURFACE_OBJECT_SPAWNING_ENABLED) {
+      throw new DomainError(
+        'Размещение объектов на поверхности временно отключено',
+        { feature: 'surfaceObjectSpawning' },
+        { code: ErrorCode.SURFACE_OBJECT_SPAWNING_DISABLED, httpStatus: 503 },
+      );
+    }
     const surface = await this.surfaceResolver.resolve(space.id);
     const created = await this.insertAtFreeCell({
       surfaceId: surface.id,
