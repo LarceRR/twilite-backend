@@ -12,7 +12,6 @@ import { QueueModule } from '@/infrastructure/queue/queue.module';
 import { RecurringJobs } from '@/infrastructure/queue/schedulers/recurringJobs';
 import { RedisModule } from '@/infrastructure/redis/redis.module';
 import { StorageModule } from '@/infrastructure/storage/storage.module';
-import { AiModule } from '@/modules/ai/ai.module';
 import { AnalyticsModule } from '@/modules/analytics/analytics.module';
 import { AppThemesModule } from '@/modules/app-themes/appThemes.module';
 import { AuthModule } from '@/modules/auth/auth.module';
@@ -20,10 +19,6 @@ import { BillingModule } from '@/modules/billing/billing.module';
 import { MediaModule } from '@/modules/media/media.module';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
 import { RbacModule } from '@/modules/rbac/rbac.module';
-import { SpacesModule } from '@/modules/spaces/spaces.module';
-import { SurfaceObjectsModule } from '@/modules/surface-objects/surfaceObjects.module';
-import { SurfacesModule } from '@/modules/surfaces/surfaces.module';
-import { TimelineModule } from '@/modules/timeline/timeline.module';
 import { TpgModule } from '@/modules/tpg/tpg.module';
 import { PixelObjectsModule } from '@/modules/tpg-pixel-objects/pixelObjects.module';
 import { ProjectsModule } from '@/modules/tpg-projects/projects.module';
@@ -31,7 +26,6 @@ import { UsersModule } from '@/modules/users/users.module';
 import { AppExceptionFilter } from '@/shared/filters/appException.filter';
 import { JwtAuthGuard } from '@/shared/guards/jwtAuth.guard';
 import { RbacPermissionsGuard } from '@/shared/guards/rbacPermissions.guard';
-import { SpacePermissionGuard } from '@/shared/guards/spacePermission.guard';
 import { LoggerModule } from '@/shared/logger/logger.module';
 import { RuntimeModule } from '@/shared/runtime.module';
 
@@ -58,12 +52,7 @@ import { RuntimeModule } from '@/shared/runtime.module';
     RbacModule,
     AuthModule,
     UsersModule,
-    SpacesModule,
-    SurfacesModule,
-    SurfaceObjectsModule,
-    TimelineModule,
     BillingModule,
-    AiModule,
     NotificationsModule,
     MediaModule,
     AnalyticsModule,
@@ -79,7 +68,6 @@ import { RuntimeModule } from '@/shared/runtime.module';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RbacPermissionsGuard },
-    { provide: APP_GUARD, useClass: SpacePermissionGuard },
     RecurringJobs,
   ],
 })

@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 
 import { RbacModule } from '@/modules/rbac/rbac.module';
-import { SpacesModule } from '@/modules/spaces/spaces.module';
 import { UsersModule } from '@/modules/users/users.module';
 
 import { AuthenticateHandler } from './application/commands/authenticate.handler';
@@ -19,7 +18,7 @@ import { RedisQrChallengeRepository } from './infrastructure/repositories/redisQ
 import { AuthController } from './presentation/controllers/auth.controller';
 
 @Module({
-  imports: [JwtModule.register({}), UsersModule, SpacesModule, RbacModule],
+  imports: [JwtModule.register({}), UsersModule, RbacModule],
   controllers: [AuthController],
   providers: [
     { provide: SESSION_REPOSITORY, useClass: DrizzleSessionRepository },

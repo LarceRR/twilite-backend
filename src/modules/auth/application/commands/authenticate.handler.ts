@@ -1,12 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { type AppLimits, LIMITS } from '@/config/limits';
 import { UserRbacService } from '@/modules/rbac/application/services/rbacAdmin.services';
-import { CreateSpaceHandler } from '@/modules/spaces/application/commands/createSpace.handler';
-import {
-  SPACE_REPOSITORY,
-  type SpaceRepository,
-} from '@/modules/spaces/domain/repositories/SpaceRepository';
-import type { User } from '@/modules/users/domain/entities/User';
 import {
   USER_REPOSITORY,
   type UserRepository,
@@ -46,18 +40,12 @@ export class AuthenticateHandler {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(SESSION_REPOSITORY) private readonly sessions: SessionRepository,
-    @Inject(SPACE_REPOSITORY) private readonly spaces: SpaceRepository,
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
-    private readonly createSpace: CreateSpaceHandler,
     private readonly userRbac: UserRbacService,
     @Inject(LIMITS) private readonly limits: AppLimits,
   ) {}
 
-  /**
-   * Signing up also creates the Personal space: the app is unusable without one,
-   * so it is part of the same operation rather than a later lazy fix-up.
-   */
   async signUp(command: SignUpCommand): Promise<AuthSessionDto> {
     const email = toEmail(command.email);
 
@@ -73,7 +61,6 @@ export class AuthenticateHandler {
     });
 
     await this.userRbac.assignDefaultGroup(user.id);
-    await this.ensurePersonalSpace(user);
 
     return this.issueSession(user.id, command.device, command.ipLabel);
   }
@@ -95,7 +82,6 @@ export class AuthenticateHandler {
       throw new AuthenticationError('Неверная почта или пароль');
     }
 
-    await this.ensurePersonalSpace(user);
     await this.userRbac.ensureDefaultGroup(user.id);
 
     return this.issueSession(user.id, command.device, command.ipLabel);
@@ -103,18 +89,6 @@ export class AuthenticateHandler {
 
   async signOut(sessionId: SessionId): Promise<void> {
     await this.sessions.revoke(sessionId);
-  }
-
-  private async ensurePersonalSpace(user: User): Promise<void> {
-    if ((await this.spaces.findPersonalSpace(user.id)) !== null) {
-      return;
-    }
-
-    await this.createSpace.execute({
-      ownerId: user.id,
-      title: 'Личное пространство',
-      type: 'Personal',
-    });
   }
 
   async issueSession(

@@ -11,6 +11,5 @@ describe('toPixelObjectLimitsDto', () => {
     expect(dto.maxFrames).toBe(64);
     expect(dto.sheetMaxBytes).toBe(8 * 1024 * 1024);
     expect(dto.supportedFormat).toBe('twilite.pixelobject/v1');
-    expect(dto.surfaceMax).toBeGreaterThan(0);
   });
 });

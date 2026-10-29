@@ -1,16 +1,11 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from '@/modules/auth/auth.module';
-import { RbacModule } from '@/modules/rbac/rbac.module';
-import { SpacesModule } from '@/modules/spaces/spaces.module';
 
-import { PushNotificationListener } from './application/listeners/pushNotification.listener';
 import { CleanupProcessor } from './infrastructure/processors/cleanup.processor';
-import { PushProcessor } from './infrastructure/processors/push.processor';
-import { RealtimeGateway } from './presentation/gateways/realtime.gateway';
 
 @Module({
-  imports: [AuthModule, SpacesModule, RbacModule],
-  providers: [RealtimeGateway, PushNotificationListener, PushProcessor, CleanupProcessor],
+  imports: [AuthModule],
+  providers: [CleanupProcessor],
 })
 export class NotificationsModule {}

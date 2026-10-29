@@ -1,4 +1,3 @@
-export * from './ai';
 export * from './analytics';
 export * from './appThemes';
 export * from './billing';
@@ -7,10 +6,7 @@ export * from './media';
 export * from './notifications';
 export * from './pixelObjectRevisions';
 export * from './pixelObjects';
-export * from './tpgProjects';
 export * from './rbac';
 export * from './sessions';
-export * from './spaces';
-export * from './surfaces';
-export * from './timeline';
+export * from './tpgProjects';
 export * from './users';

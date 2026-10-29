@@ -1,20 +1,12 @@
 /** Heavy or retryable work never happens inside a request. */
 export const queueNames = {
-  ai: 'ai',
-  push: 'push',
-  email: 'email',
   cleanup: 'cleanup',
   analytics: 'analytics',
   media: 'media',
-  surfaceLifecycle: 'surface-lifecycle',
 } as const;
 
 export const jobNames = {
-  generateInsight: 'generate-insight',
-  sendPush: 'send-push',
-  sendInvitationEmail: 'send-invitation-email',
   expireSessions: 'expire-sessions',
-  ageSurfaceObjects: 'age-surface-objects',
   trackEvent: 'track-event',
   confirmUpload: 'confirm-upload',
   gcPendingMedia: 'gc-pending-media',

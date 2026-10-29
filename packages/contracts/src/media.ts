@@ -19,7 +19,6 @@ export const createUploadRequestSchema = z.object({
   kind: z.enum(['image', 'voice', 'attachment', 'pixel-sheet']),
   contentType: z.string().min(3).max(120),
   byteSize: z.number().int().min(1).max(MAX_UPLOAD_BYTES),
-  spaceId: uuidSchema.optional(),
 });
 
 export const AVATAR_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;

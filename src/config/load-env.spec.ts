@@ -20,11 +20,11 @@ describe('parseEnvFile', () => {
 
   it('снимает кавычки и понимает префикс export', () => {
     const parsed = parseEnvFile(
-      ['export JWT_ACCESS_SECRET="a b c"', "AI_MODEL='gpt-4o-mini'"].join('\n'),
+      ['export JWT_ACCESS_SECRET="a b c"', "DISPLAY_LABEL='sample value'"].join('\n'),
     );
 
     expect(parsed.get('JWT_ACCESS_SECRET')).toBe('a b c');
-    expect(parsed.get('AI_MODEL')).toBe('gpt-4o-mini');
+    expect(parsed.get('DISPLAY_LABEL')).toBe('sample value');
   });
 
   it('режет комментарий в конце строки, но не # внутри значения', () => {

@@ -160,123 +160,6 @@ export const LIMIT_DEFINITIONS: readonly LimitDefinition[] = [
     description: 'Опросы статуса одного QR-вызова в минуту',
   },
 
-  // Пространства
-  {
-    key: 'LIMIT_SPACES_PER_USER',
-    path: 'spaces.spacesPerUser',
-    unit: 'items',
-    production: 3,
-    min: 1,
-    max: 50,
-    owner: 'spaces',
-    description: 'Пространства, которыми пользователь владеет',
-  },
-  {
-    key: 'LIMIT_SPACE_TITLE_MAX_LENGTH',
-    path: 'spaces.titleMaxLength',
-    unit: 'characters',
-    production: 80,
-    min: 8,
-    max: 200,
-    owner: 'spaces',
-    description: 'Максимальная длина названия пространства',
-  },
-  {
-    key: 'LIMIT_MEMBERS_PER_SPACE',
-    path: 'spaces.membersPerSpace',
-    unit: 'items',
-    production: 2,
-    min: 2,
-    max: 10,
-    owner: 'spaces',
-    description: 'Участники одного пространства; MVP — пара',
-  },
-
-  // Приглашения
-  {
-    key: 'LIMIT_PENDING_INVITATIONS_PER_SPACE',
-    path: 'invitations.pendingPerSpace',
-    unit: 'items',
-    production: 1,
-    min: 1,
-    max: 10,
-    owner: 'spaces',
-    description:
-      'Активные приглашения на пространство; совпадает с частичным индексом invitations_pending_unique',
-  },
-  {
-    key: 'LIMIT_INVITATIONS_PER_USER_PER_DAY',
-    path: 'invitations.perUserPerDay',
-    unit: 'requests/day',
-    production: 20,
-    min: 1,
-    max: 500,
-    owner: 'spaces',
-    description: 'Приглашения, отправленные пользователем за сутки',
-  },
-  {
-    key: 'LIMIT_INVITATION_TTL_HOURS',
-    path: 'invitations.ttlHours',
-    unit: 'hours',
-    production: 72,
-    min: 1,
-    max: 720,
-    owner: 'spaces',
-    description: 'Срок жизни приглашения до перехода в expired',
-  },
-
-  // Моменты и поверхность
-  {
-    key: 'LIMIT_MOMENT_TEXT_MAX_LENGTH',
-    path: 'moments.textMaxLength',
-    unit: 'characters',
-    production: 2000,
-    min: 100,
-    max: 20000,
-    owner: 'surface-objects',
-    description: 'Длина пользовательского текста момента',
-  },
-  {
-    key: 'LIMIT_MOMENT_METADATA_MAX_BYTES',
-    path: 'moments.metadataMaxBytes',
-    unit: 'bytes',
-    production: 8192,
-    min: 512,
-    max: 262144,
-    owner: 'surface-objects',
-    description: 'Размер metadata момента в JSON',
-  },
-  {
-    key: 'LIMIT_MOMENT_METADATA_MAX_KEYS',
-    path: 'moments.metadataMaxKeys',
-    unit: 'items',
-    production: 32,
-    min: 4,
-    max: 200,
-    owner: 'surface-objects',
-    description: 'Ключи верхнего уровня в metadata момента',
-  },
-  {
-    key: 'LIMIT_MOMENTS_PER_SPACE_PER_DAY',
-    path: 'moments.perSpacePerDay',
-    unit: 'requests/day',
-    production: 200,
-    min: 10,
-    max: 5000,
-    owner: 'surface-objects',
-    description: 'Создание моментов в пространстве за сутки',
-  },
-  {
-    key: 'LIMIT_OBJECTS_PER_SURFACE',
-    path: 'moments.objectsPerSurface',
-    unit: 'items',
-    production: 500,
-    min: 10,
-    max: 10000,
-    owner: 'surfaces',
-    description: 'Объекты на одной поверхности',
-  },
-
   // HTTP-граница
   {
     key: 'LIMIT_REQUEST_BODY_MAX_BYTES',
@@ -389,58 +272,6 @@ export const LIMIT_DEFINITIONS: readonly LimitDefinition[] = [
     max: 10485760,
     owner: 'media',
     description: 'Размер аватара',
-  },
-
-  // AI
-  {
-    key: 'LIMIT_AI_INPUT_MAX_CHARACTERS',
-    path: 'ai.inputMaxCharacters',
-    unit: 'characters',
-    production: 8000,
-    min: 500,
-    max: 100000,
-    owner: 'ai',
-    description: 'Размер входных данных, уходящих провайдеру',
-  },
-  {
-    key: 'LIMIT_AI_REQUESTS_PER_USER_PER_MINUTE',
-    path: 'ai.requestsPerUserPerMinute',
-    unit: 'requests/minute',
-    production: 3,
-    min: 1,
-    max: 60,
-    owner: 'ai',
-    description: 'Запросы к AI на пользователя в минуту',
-  },
-  {
-    key: 'LIMIT_AI_REQUESTS_PER_USER_PER_DAY',
-    path: 'ai.requestsPerUserPerDay',
-    unit: 'requests/day',
-    production: 20,
-    min: 1,
-    max: 1000,
-    owner: 'ai',
-    description: 'Запросы к AI на пользователя в сутки',
-  },
-  {
-    key: 'LIMIT_AI_PROVIDER_TIMEOUT_MS',
-    path: 'ai.providerTimeoutMs',
-    unit: 'milliseconds',
-    production: 20000,
-    min: 1000,
-    max: 120000,
-    owner: 'ai',
-    description: 'Таймаут вызова AI-провайдера',
-  },
-  {
-    key: 'LIMIT_AI_DAILY_BUDGET_USD_CENTS',
-    path: 'ai.dailyBudgetUsdCents',
-    unit: 'usd cents/day',
-    production: 500,
-    min: 1,
-    max: 1000000,
-    owner: 'ai',
-    description: 'Суточный бюджет на AI; при исчерпании вызовы провайдера не выполняются',
   },
 
   // TPG — The Pixelart Generator
@@ -563,23 +394,6 @@ export type AppLimits = {
     readonly qrApprovalsPerUserPerHour: number;
     readonly qrPollsPerChallengePerMinute: number;
   };
-  readonly spaces: {
-    readonly spacesPerUser: number;
-    readonly titleMaxLength: number;
-    readonly membersPerSpace: number;
-  };
-  readonly invitations: {
-    readonly pendingPerSpace: number;
-    readonly perUserPerDay: number;
-    readonly ttlHours: number;
-  };
-  readonly moments: {
-    readonly textMaxLength: number;
-    readonly metadataMaxBytes: number;
-    readonly metadataMaxKeys: number;
-    readonly perSpacePerDay: number;
-    readonly objectsPerSurface: number;
-  };
   readonly http: {
     readonly requestBodyMaxBytes: number;
     readonly jsonDepthMax: number;
@@ -594,13 +408,6 @@ export type AppLimits = {
     readonly uploadsPerUserPerDay: number;
     readonly signedUrlTtlSeconds: number;
     readonly avatarMaxBytes: number;
-  };
-  readonly ai: {
-    readonly inputMaxCharacters: number;
-    readonly requestsPerUserPerMinute: number;
-    readonly requestsPerUserPerDay: number;
-    readonly providerTimeoutMs: number;
-    readonly dailyBudgetUsdCents: number;
   };
   readonly tpg: {
     readonly imageMaxBytes: number;
@@ -685,23 +492,6 @@ export function loadLimits(source: NodeJS.ProcessEnv = process.env): AppLimits {
       qrApprovalsPerUserPerHour: at('LIMIT_QR_APPROVALS_PER_USER_PER_HOUR'),
       qrPollsPerChallengePerMinute: at('LIMIT_QR_POLLS_PER_CHALLENGE_PER_MINUTE'),
     },
-    spaces: {
-      spacesPerUser: at('LIMIT_SPACES_PER_USER'),
-      titleMaxLength: at('LIMIT_SPACE_TITLE_MAX_LENGTH'),
-      membersPerSpace: at('LIMIT_MEMBERS_PER_SPACE'),
-    },
-    invitations: {
-      pendingPerSpace: at('LIMIT_PENDING_INVITATIONS_PER_SPACE'),
-      perUserPerDay: at('LIMIT_INVITATIONS_PER_USER_PER_DAY'),
-      ttlHours: at('LIMIT_INVITATION_TTL_HOURS'),
-    },
-    moments: {
-      textMaxLength: at('LIMIT_MOMENT_TEXT_MAX_LENGTH'),
-      metadataMaxBytes: at('LIMIT_MOMENT_METADATA_MAX_BYTES'),
-      metadataMaxKeys: at('LIMIT_MOMENT_METADATA_MAX_KEYS'),
-      perSpacePerDay: at('LIMIT_MOMENTS_PER_SPACE_PER_DAY'),
-      objectsPerSurface: at('LIMIT_OBJECTS_PER_SURFACE'),
-    },
     http: {
       requestBodyMaxBytes: at('LIMIT_REQUEST_BODY_MAX_BYTES'),
       jsonDepthMax: at('LIMIT_JSON_DEPTH_MAX'),
@@ -716,13 +506,6 @@ export function loadLimits(source: NodeJS.ProcessEnv = process.env): AppLimits {
       uploadsPerUserPerDay: at('LIMIT_MEDIA_UPLOADS_PER_USER_PER_DAY'),
       signedUrlTtlSeconds: at('LIMIT_MEDIA_URL_TTL_SECONDS'),
       avatarMaxBytes: at('LIMIT_AVATAR_MAX_BYTES'),
-    },
-    ai: {
-      inputMaxCharacters: at('LIMIT_AI_INPUT_MAX_CHARACTERS'),
-      requestsPerUserPerMinute: at('LIMIT_AI_REQUESTS_PER_USER_PER_MINUTE'),
-      requestsPerUserPerDay: at('LIMIT_AI_REQUESTS_PER_USER_PER_DAY'),
-      providerTimeoutMs: at('LIMIT_AI_PROVIDER_TIMEOUT_MS'),
-      dailyBudgetUsdCents: at('LIMIT_AI_DAILY_BUDGET_USD_CENTS'),
     },
     tpg: {
       imageMaxBytes: at('LIMIT_TPG_IMAGE_MAX_BYTES'),

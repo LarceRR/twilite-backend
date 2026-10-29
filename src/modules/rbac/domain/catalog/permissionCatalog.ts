@@ -34,45 +34,6 @@ export const PERMISSION_CATALOG: readonly PermissionCatalogEntry[] = [
   entry('twilite.users.delete', 'Delete users', 'Удаление пользователей'),
   entry('twilite.users.*', 'All user management actions', 'Все действия управления пользователями'),
 
-  // --- twilite.spaces ---
-  entry('twilite.spaces.list', 'List spaces', 'Список пространств'),
-  entry('twilite.spaces.create', 'Create a space', 'Создание пространства'),
-  entry('twilite.spaces.view', 'View a space', 'Просмотр пространства'),
-  entry('twilite.spaces.invite', 'Invite to a space', 'Приглашение в пространство'),
-  entry('twilite.spaces.invitations.view', 'View pending invitations', 'Просмотр приглашений'),
-  entry('twilite.spaces.invitations.respond', 'Respond to invitations', 'Ответ на приглашения'),
-  entry('twilite.spaces.*', 'All space actions', 'Все действия с пространствами'),
-
-  // --- twilite.surfaces ---
-  entry('twilite.surfaces.view', 'View surface', 'Просмотр поверхности'),
-  entry('twilite.surfaces.*', 'All surface actions', 'Все действия с поверхностью'),
-
-  // --- twilite.surfaceObjects ---
-  entry('twilite.surfaceObjects.kinds', 'View surface object kinds', 'Просмотр видов объектов'),
-  entry('twilite.surfaceObjects.create', 'Create surface objects', 'Создание объектов поверхности'),
-  entry(
-    'twilite.surfaceObjects.update',
-    'Update surface objects',
-    'Изменение объектов поверхности',
-  ),
-  entry('twilite.surfaceObjects.delete', 'Delete surface objects', 'Удаление объектов поверхности'),
-  entry(
-    'twilite.surfaceObjects.changeState',
-    'Change surface object state',
-    'Смена состояния объектов поверхности',
-  ),
-  entry('twilite.surfaceObjects.*', 'All surface object actions', 'Все действия с объектами'),
-
-  // --- twilite.timeline ---
-  entry('twilite.timeline.view', 'View timeline', 'Просмотр истории'),
-  entry('twilite.timeline.statistics', 'View timeline statistics', 'Просмотр статистики истории'),
-  entry('twilite.timeline.*', 'All timeline actions', 'Все действия с историей'),
-
-  // --- twilite.ai ---
-  entry('twilite.ai.generate', 'Generate AI insights', 'Генерация AI-инсайтов'),
-  entry('twilite.ai.view', 'View AI insights', 'Просмотр AI-инсайтов'),
-  entry('twilite.ai.*', 'All AI actions', 'Все действия AI'),
-
   // --- twilite.billing ---
   entry('twilite.billing.view', 'View billing state', 'Просмотр состояния подписки'),
   entry('twilite.billing.*', 'All billing actions', 'Все действия биллинга'),
@@ -85,14 +46,6 @@ export const PERMISSION_CATALOG: readonly PermissionCatalogEntry[] = [
   // --- twilite.analytics ---
   entry('twilite.analytics.track', 'Track analytics events', 'Отправка аналитики'),
   entry('twilite.analytics.*', 'All analytics actions', 'Все действия аналитики'),
-
-  // --- twilite.realtime ---
-  entry(
-    'twilite.realtime.subscribe',
-    'Subscribe to realtime space updates',
-    'Подписка на realtime',
-  ),
-  entry('twilite.realtime.*', 'All realtime actions', 'Все realtime-действия'),
 
   // --- ta.adminPanel ---
   entry('ta.adminPanel.access', 'Access the admin panel', 'Доступ к админ-панели'),
@@ -160,15 +113,9 @@ export const USER_GROUP_PERMISSIONS: readonly string[] = [
   'twilite.auth.*',
   'twilite.users.view',
   'twilite.users.edit',
-  'twilite.spaces.*',
-  'twilite.surfaces.*',
-  'twilite.surfaceObjects.*',
-  'twilite.timeline.*',
-  'twilite.ai.*',
   'twilite.billing.view',
   'twilite.media.*',
   'twilite.analytics.track',
-  'twilite.realtime.subscribe',
   'tpg.editor.view',
   'tpg.pixelate.use',
   'tpg.pixelObjects.readPublished',

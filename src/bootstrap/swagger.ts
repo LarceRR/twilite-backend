@@ -15,9 +15,8 @@ export function setupSwagger(app: INestApplication, config: AppConfig): void {
       .setTitle('Twilite API')
       .setDescription(
         [
-          'Space — центральная сущность. У каждого Space одна Surface (grid),',
-          'в ячейке не более одного SurfaceObject. Позицию назначает сервер.',
-          'Write-запросы принимают и возвращают version (оптимистичные блокировки).',
+          'API Twilite. Защищённые маршруты требуют bearer-токен.',
+          'Write-запросы принимают и возвращают version для оптимистичных блокировок.',
         ].join(' '),
       )
       .setVersion('1.0.0')

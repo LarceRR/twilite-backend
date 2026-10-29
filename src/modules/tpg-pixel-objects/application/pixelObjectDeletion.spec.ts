@@ -7,7 +7,6 @@ import {
   mediaAssets,
   pixelObjectRevisions,
   pixelObjects,
-  surfaceObjects,
   tpgProjects,
 } from '@/database/schema';
 import {
@@ -25,7 +24,6 @@ import {
   authorHardDeletes,
   collectPixelObjectMediaIds,
   mediaIdsSafeToDelete,
-  stripPixelObjectMetadata,
 } from './pixelObjectDeletion';
 import { PixelObjectsService } from './pixelObjects.service';
 
@@ -73,12 +71,6 @@ describe('purge media selection', () => {
       'sheet-head',
     ]);
   });
-
-  it('drops only the pixelObjectId key from surface metadata', () => {
-    expect(stripPixelObjectMetadata({ pixelObjectId: 'obj-1', note: 'keep' }, 'obj-1')).toEqual({
-      note: 'keep',
-    });
-  });
 });
 
 describe('pixel object delete permission', () => {
@@ -99,7 +91,6 @@ describe('pixel object delete permission', () => {
 type Store = {
   objects: PixelObjectRow[];
   revisions: Array<{ sheetMediaId: string; previewMediaId: string | null }>;
-  surfaces: Array<{ id: string; pixelObjectId: string | null; metadata: Record<string, unknown> }>;
   media: Array<{ id: string; storageKey: string }>;
 };
 
@@ -179,9 +170,6 @@ function createDb(store: Store) {
         if (this.table === pixelObjectRevisions) {
           return store.revisions.map((row) => ({ ...row }));
         }
-        if (this.table === surfaceObjects) {
-          return store.surfaces.map((row) => ({ ...row }));
-        }
         if (this.table === mediaAssets) {
           return store.media.map((row) => ({ ...row }));
         }
@@ -194,9 +182,6 @@ function createDb(store: Store) {
         if (this.table === pixelObjects) {
           store.objects = store.objects.map((row) => ({ ...row, ...this.patch }));
           return store.objects.map((row) => ({ id: row.id }));
-        }
-        if (this.table === surfaceObjects) {
-          store.surfaces = store.surfaces.map((row) => ({ ...row, ...this.patch }));
         }
         return [];
       }
@@ -245,7 +230,6 @@ describe('PixelObjectsService.remove', () => {
     const store: Store = {
       objects: [objectRow({ status: 'pending' })],
       revisions: [{ sheetMediaId: 'sheet-1', previewMediaId: 'preview-1' }],
-      surfaces: [],
       media: [
         { id: 'sheet-1', storageKey: 'media/pixel-sheet/sheet-1' },
         { id: 'preview-1', storageKey: 'pixel-preview/preview-1.png' },
@@ -265,7 +249,6 @@ describe('PixelObjectsService.remove', () => {
     const store: Store = {
       objects: [objectRow({ status: 'rejected' })],
       revisions: [{ sheetMediaId: 'sheet-1', previewMediaId: null }],
-      surfaces: [],
       media: [{ id: 'sheet-1', storageKey: 'media/pixel-sheet/sheet-1' }],
     };
     const storage = { delete: vi.fn(async () => undefined) };
@@ -286,7 +269,6 @@ describe('PixelObjectsService.remove', () => {
         }),
       ],
       revisions: [],
-      surfaces: [],
       media: [],
     };
     const storage = { delete: vi.fn(async () => undefined) };
@@ -320,7 +302,6 @@ describe('PixelObjectsService.remove', () => {
         }),
       ],
       revisions: [],
-      surfaces: [],
       media: [],
     };
     const storage = { delete: vi.fn(async () => undefined) };
@@ -337,7 +318,7 @@ describe('PixelObjectsService.remove', () => {
 });
 
 describe('PixelObjectsService.purge', () => {
-  it('erases a published object, clears the surface binding, and deletes storage keys', async () => {
+  it('erases a published object and deletes its storage keys', async () => {
     const store: Store = {
       objects: [
         objectRow({
@@ -346,13 +327,6 @@ describe('PixelObjectsService.purge', () => {
         }),
       ],
       revisions: [{ sheetMediaId: 'sheet-1', previewMediaId: 'preview-1' }],
-      surfaces: [
-        {
-          id: 'placement-1',
-          pixelObjectId: 'obj-1',
-          metadata: { pixelObjectId: 'obj-1', note: 'keep' },
-        },
-      ],
       media: [
         { id: 'sheet-1', storageKey: 'media/pixel-sheet/sheet-1' },
         { id: 'preview-1', storageKey: 'pixel-preview/preview-1.png' },
@@ -363,16 +337,12 @@ describe('PixelObjectsService.purge', () => {
 
     await expect(service.purge('admin-1', 'obj-1')).resolves.toBeUndefined();
     expect(store.objects).toEqual([]);
-    expect(store.surfaces[0]).toMatchObject({
-      pixelObjectId: null,
-      metadata: { note: 'keep' },
-    });
     expect(storage.delete).toHaveBeenCalledWith('media/pixel-sheet/sheet-1');
     expect(storage.delete).toHaveBeenCalledWith('pixel-preview/preview-1.png');
   });
 
   it('returns not found when the object is already gone', async () => {
-    const store: Store = { objects: [], revisions: [], surfaces: [], media: [] };
+    const store: Store = { objects: [], revisions: [], media: [] };
     const service = createService(store, {}, { delete: vi.fn() });
     await expect(service.purge('admin-1', 'missing')).rejects.toBeInstanceOf(NotFoundError);
   });

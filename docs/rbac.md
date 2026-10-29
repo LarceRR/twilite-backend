@@ -1,6 +1,6 @@
 # Platform RBAC
 
-Twilite uses a custom platform RBAC layer (no CASL/Casbin). Space-scoped permissions (`space.view`, …) remain separate and still apply on space routes.
+Twilite uses a custom platform RBAC layer (no CASL/Casbin).
 
 ## Model
 
@@ -20,7 +20,7 @@ Cached in Redis as `rbac:user:{userId}:effective_permissions` (`RBAC_CACHE_TTL`,
 
 1. Add an entry to [`src/modules/rbac/domain/catalog/permissionCatalog.ts`](../src/modules/rbac/domain/catalog/permissionCatalog.ts) (EN + RU descriptions).
 2. If default users need it, add the name to `USER_GROUP_PERMISSIONS` / `ARTIST_GROUP_PERMISSIONS` / `ADMIN_GROUP_PERMISSIONS` in the same file.
-3. Put `@RequireRbac('your.permission.name')` on the Nest controller method (keep `@RequirePermission` for space routes).
+3. Put `@RequireRbac('your.permission.name')` on the Nest controller method.
 4. Restart the API — `RbacSeedService` upserts the catalog on boot.
 5. Optionally gate UI in Twilite App / tpg with the same string and wildcard helpers.
 
@@ -37,7 +37,7 @@ Prefer the Admin Panel (`PATCH /v1/admin/groups/:id`) or seed updates. Inheritan
 | GET/PATCH | `/v1/admin/groups…` | `ta.adminPanel.groups.view` / `.edit` |
 | GET/PATCH | `/v1/admin/users…` | `ta.adminPanel.users.view` |
 
-Product routes (auth sessions, spaces, media, tpg, …) require **authentication only** (+ existing space permissions where applicable). Platform `@RequireRbac` is reserved for `/v1/admin/*`.
+Product routes (auth sessions, media, tpg, …) require **authentication only**. Platform `@RequireRbac` is reserved for `/v1/admin/*`.
 
 Admin panel entry also requires `ta.adminPanel.access` (`AdminPanelGuard`).
 

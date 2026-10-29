@@ -13,7 +13,6 @@ function pendingRow(overrides?: Record<string, unknown>) {
   return {
     id: ASSET_ID,
     ownerId: OWNER,
-    spaceId: null,
     kind: 'pixel-sheet',
     storageKey: `${OWNER}/pixel-sheet/${ASSET_ID}`,
     contentType: 'image/png',

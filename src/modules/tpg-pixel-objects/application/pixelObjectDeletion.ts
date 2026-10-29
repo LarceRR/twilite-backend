@@ -48,17 +48,3 @@ export function mediaIdsSafeToDelete(
 ): string[] {
   return candidates.filter((id) => !stillReferenced.has(id));
 }
-
-export function stripPixelObjectMetadata(
-  metadata: unknown,
-  pixelObjectId: string,
-): Record<string, unknown> {
-  if (metadata === null || typeof metadata !== 'object' || Array.isArray(metadata)) {
-    return {};
-  }
-  const next = { ...(metadata as Record<string, unknown>) };
-  if (next['pixelObjectId'] === pixelObjectId) {
-    delete next['pixelObjectId'];
-  }
-  return next;
-}

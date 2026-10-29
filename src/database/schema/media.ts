@@ -1,6 +1,5 @@
 import { index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-import { spaces } from './spaces';
 import { users } from './users';
 
 export const mediaAssets = pgTable(
@@ -10,7 +9,6 @@ export const mediaAssets = pgTable(
     ownerId: uuid('owner_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    spaceId: uuid('space_id').references(() => spaces.id, { onDelete: 'cascade' }),
     kind: text('kind').notNull(),
     storageKey: text('storage_key').notNull(),
     contentType: text('content_type').notNull(),

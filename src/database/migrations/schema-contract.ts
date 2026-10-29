@@ -11,7 +11,6 @@ import { resolve } from 'node:path';
  */
 
 export const EXPECTED_TABLES = [
-  'ai_insights',
   'analytics_events',
   'audit_log',
   'billing_webhook_events',
@@ -20,19 +19,13 @@ export const EXPECTED_TABLES = [
   'group_permissions',
   'groups',
   'idempotency_records',
-  'invitations',
   'media_assets',
   'notifications',
   'permissions',
   'pixel_objects',
   'pixel_object_revisions',
   'sessions',
-  'space_members',
-  'spaces',
   'subscriptions',
-  'surface_objects',
-  'surfaces',
-  'timeline_events',
   'tpg_projects',
   'user_credentials',
   'user_groups',
@@ -52,12 +45,8 @@ export type IndexContract = {
 export const EXPECTED_INDEXES: readonly IndexContract[] = [
   { name: 'users_email_unique', table: 'users', unique: true, partial: false },
   { name: 'device_tokens_token_unique', table: 'device_tokens', unique: true, partial: false },
-  { name: 'surfaces_space_unique', table: 'surfaces', unique: true, partial: false },
-  { name: 'surface_objects_cell_unique', table: 'surface_objects', unique: true, partial: false },
-  { name: 'invitations_pending_unique', table: 'invitations', unique: true, partial: true },
   { name: 'idempotency_scope_key_unique', table: 'idempotency_records', unique: true, partial: false },
   { name: 'idempotency_expires_idx', table: 'idempotency_records', unique: false, partial: false },
-  { name: 'ai_insights_space_idx', table: 'ai_insights', unique: false, partial: false },
   { name: 'analytics_name_idx', table: 'analytics_events', unique: false, partial: false },
   { name: 'audit_action_idx', table: 'audit_log', unique: false, partial: false },
   { name: 'entitlements_user_key_idx', table: 'entitlements', unique: false, partial: false },
@@ -95,15 +84,6 @@ export const EXPECTED_INDEXES: readonly IndexContract[] = [
   { name: 'notifications_user_idx', table: 'notifications', unique: false, partial: false },
   { name: 'sessions_user_idx', table: 'sessions', unique: false, partial: false },
   { name: 'sessions_expires_idx', table: 'sessions', unique: false, partial: false },
-  { name: 'invitations_invitee_email_idx', table: 'invitations', unique: false, partial: false },
-  { name: 'space_members_user_idx', table: 'space_members', unique: false, partial: false },
-  { name: 'spaces_owner_idx', table: 'spaces', unique: false, partial: false },
-  { name: 'surface_objects_surface_idx', table: 'surface_objects', unique: false, partial: false },
-  { name: 'surface_objects_space_idx', table: 'surface_objects', unique: false, partial: false },
-  { name: 'surface_objects_state_updated_idx', table: 'surface_objects', unique: false, partial: false },
-  { name: 'surface_objects_pixel_object_idx', table: 'surface_objects', unique: false, partial: false },
-  { name: 'timeline_space_sequence_idx', table: 'timeline_events', unique: false, partial: false },
-  { name: 'timeline_space_type_idx', table: 'timeline_events', unique: false, partial: false },
   { name: 'permissions_name_unique', table: 'permissions', unique: true, partial: false },
   { name: 'groups_name_unique', table: 'groups', unique: true, partial: false },
   { name: 'groups_parent_idx', table: 'groups', unique: false, partial: false },
@@ -129,8 +109,6 @@ export type ForeignKeyContract = {
  * удалять чужую историю.
  */
 export const EXPECTED_FOREIGN_KEYS: readonly ForeignKeyContract[] = [
-  { name: 'ai_insights_space_id_spaces_id_fk', onDelete: 'cascade' },
-  { name: 'ai_insights_requested_by_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'analytics_events_user_id_users_id_fk', onDelete: 'set null' },
   { name: 'audit_log_actor_user_id_users_id_fk', onDelete: 'set null' },
   { name: 'entitlements_user_id_users_id_fk', onDelete: 'cascade' },
@@ -148,25 +126,9 @@ export const EXPECTED_FOREIGN_KEYS: readonly ForeignKeyContract[] = [
   { name: 'pixel_object_revisions_reviewed_by_user_id_users_id_fk', onDelete: 'set null' },
   { name: 'tpg_projects_owner_id_users_id_fk', onDelete: 'cascade' },
   { name: 'tpg_projects_avatar_media_id_media_assets_id_fk', onDelete: 'set null' },
-  { name: 'media_assets_space_id_spaces_id_fk', onDelete: 'cascade' },
   { name: 'device_tokens_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'notifications_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'sessions_user_id_users_id_fk', onDelete: 'cascade' },
-  { name: 'invitations_space_id_spaces_id_fk', onDelete: 'cascade' },
-  { name: 'invitations_invited_by_user_id_users_id_fk', onDelete: 'cascade' },
-  { name: 'invitations_invitee_user_id_users_id_fk', onDelete: 'set null' },
-  { name: 'space_members_space_id_spaces_id_fk', onDelete: 'cascade' },
-  { name: 'space_members_user_id_users_id_fk', onDelete: 'cascade' },
-  { name: 'spaces_owner_id_users_id_fk', onDelete: 'cascade' },
-  { name: 'surface_objects_space_id_spaces_id_fk', onDelete: 'cascade' },
-  { name: 'surface_objects_surface_id_surfaces_id_fk', onDelete: 'cascade' },
-  { name: 'surface_objects_created_by_user_id_users_id_fk', onDelete: 'cascade' },
-  { name: 'surface_objects_subject_user_id_users_id_fk', onDelete: 'cascade' },
-  { name: 'surface_objects_pixel_object_id_pixel_objects_id_fk', onDelete: 'set null' },
-  { name: 'surfaces_space_id_spaces_id_fk', onDelete: 'cascade' },
-  { name: 'timeline_events_space_id_spaces_id_fk', onDelete: 'cascade' },
-  { name: 'timeline_events_actor_user_id_users_id_fk', onDelete: 'set null' },
-  { name: 'timeline_events_subject_user_id_users_id_fk', onDelete: 'set null' },
   { name: 'user_credentials_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'user_preferences_user_id_users_id_fk', onDelete: 'cascade' },
   { name: 'group_permissions_group_id_groups_id_fk', onDelete: 'cascade' },
@@ -177,10 +139,8 @@ export const EXPECTED_FOREIGN_KEYS: readonly ForeignKeyContract[] = [
   { name: 'user_permissions_permission_id_permissions_id_fk', onDelete: 'cascade' },
 ];
 
-/** Составной ключ участников пространства защищает от двойного membership. */
 export const EXPECTED_PRIMARY_KEYS: readonly string[] = [
-  'space_members_space_id_user_id_pk',
-  ...EXPECTED_TABLES.filter((table) => table !== 'space_members').map((table) => `${table}_pkey`),
+  ...EXPECTED_TABLES.map((table) => `${table}_pkey`),
 ];
 
 export type ColumnContract = { readonly table: string; readonly column: string; readonly nullable: boolean };
@@ -198,17 +158,6 @@ export const EXPECTED_COLUMN_NULLABILITY: readonly ColumnContract[] = [
   { table: 'idempotency_records', column: 'status_code', nullable: true },
   { table: 'users', column: 'email', nullable: false },
   { table: 'users', column: 'avatar_storage_key', nullable: true },
-  { table: 'spaces', column: 'owner_id', nullable: false },
-  { table: 'spaces', column: 'version', nullable: false },
-  { table: 'surfaces', column: 'version', nullable: false },
-  { table: 'surfaces', column: 'spawn_count', nullable: false },
-  { table: 'surfaces', column: 'active_object_count', nullable: false },
-  { table: 'surfaces', column: 'last_spawn_x', nullable: true },
-  { table: 'surfaces', column: 'last_spawn_y', nullable: true },
-  { table: 'surfaces', column: 'recent_spawn_columns', nullable: false },
-  { table: 'surface_objects', column: 'version', nullable: false },
-  { table: 'surface_objects', column: 'created_by_user_id', nullable: false },
-  { table: 'space_members', column: 'role', nullable: false },
   { table: 'sessions', column: 'refresh_token_hash', nullable: false },
   { table: 'sessions', column: 'expires_at', nullable: false },
   { table: 'sessions', column: 'ip_label', nullable: true },
@@ -225,7 +174,6 @@ export const EXPECTED_COLUMN_NULLABILITY: readonly ColumnContract[] = [
   { table: 'pixel_object_revisions', column: 'published_at', nullable: true },
   { table: 'pixel_object_revisions', column: 'content_hash', nullable: false },
   { table: 'pixel_object_revisions', column: 'revision_number', nullable: false },
-  { table: 'surface_objects', column: 'pixel_object_id', nullable: true },
 ];
 
 const MIGRATIONS_DIRECTORY = 'src/database/migrations';

@@ -1,19 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { PixelObjectLimits } from '@twilite/contracts';
-import { and, eq, inArray, isNotNull, ne, or, type SQL, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, ne, or, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { Logger } from 'nestjs-pino';
 
 import { type AppLimits, LIMITS } from '@/config/limits';
 import { DATABASE, type Database } from '@/database/drizzle/drizzle.module';
-import {
-  mediaAssets,
-  pixelObjectRevisions,
-  pixelObjects,
-  surfaceObjects,
-  tpgProjects,
-} from '@/database/schema';
+import { mediaAssets, pixelObjectRevisions, pixelObjects, tpgProjects } from '@/database/schema';
 import { STORAGE, type StoragePort } from '@/infrastructure/storage/StoragePort';
 import { EffectivePermissionsService } from '@/modules/rbac/application/services/effectivePermissions.service';
 import { hasAnyPermissionMatch } from '@/modules/rbac/domain/services/permissionMatcher';
@@ -39,7 +33,6 @@ import {
   authorHardDeletes,
   collectPixelObjectMediaIds,
   mediaIdsSafeToDelete,
-  stripPixelObjectMetadata,
 } from './pixelObjectDeletion';
 import {
   authorCursorWhere,
@@ -780,28 +773,6 @@ export class PixelObjectsService {
         .from(pixelObjectRevisions)
         .where(eq(pixelObjectRevisions.pixelObjectId, id));
       const mediaIds = collectPixelObjectMediaIds(head.sheetMediaId, revisions);
-
-      const placementFilter = or(
-        eq(surfaceObjects.pixelObjectId, id),
-        sql`${surfaceObjects.metadata}->>'pixelObjectId' = ${id}`,
-      );
-      if (placementFilter === undefined) {
-        throw new Error('purgeStoredObject: empty SQL expression');
-      }
-      const placements = await tx
-        .select({ id: surfaceObjects.id, metadata: surfaceObjects.metadata })
-        .from(surfaceObjects)
-        .where(placementFilter);
-      for (const placement of placements) {
-        await tx
-          .update(surfaceObjects)
-          .set({
-            metadata: stripPixelObjectMetadata(placement.metadata, id),
-            pixelObjectId: null,
-            updatedAt: new Date(),
-          })
-          .where(eq(surfaceObjects.id, placement.id));
-      }
 
       await tx
         .update(pixelObjects)

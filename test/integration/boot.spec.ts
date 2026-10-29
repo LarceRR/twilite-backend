@@ -34,21 +34,12 @@ describe.skipIf(process.env['RUN_INTEGRATION'] !== '1')('запуск прило
     const response = await app.inject({ method: 'GET', url: '/v1/docs-json' });
     const document = response.json() as { paths: Record<string, unknown> };
     expect(response.statusCode).toBe(200);
-    for (const path of [
-      '/v1/auth/sign-in',
-      '/v1/auth/qr/challenges',
-      '/v1/spaces',
-      '/v1/spaces/{spaceId}/surface',
-      '/v1/spaces/{spaceId}/surface-objects',
-      '/v1/spaces/{spaceId}/timeline',
-      '/v1/surface-objects/{objectId}',
-      '/v1/billing/state',
-    ])
+    for (const path of ['/v1/auth/sign-in', '/v1/auth/qr/challenges', '/v1/billing/state'])
       expect(Object.keys(document.paths)).toContain(path);
   });
 
   it('закрывает защищённые маршруты без токена', async () => {
-    const response = await app.inject({ method: 'GET', url: '/v1/spaces' });
+    const response = await app.inject({ method: 'GET', url: '/v1/users/me' });
     expect(response.statusCode).toBe(401);
   });
 });

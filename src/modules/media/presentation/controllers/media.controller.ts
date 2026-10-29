@@ -172,7 +172,6 @@ export class MediaController {
       .insert(mediaAssets)
       .values({
         ownerId: userId,
-        spaceId: body.spaceId ?? null,
         kind: body.kind,
         storageKey,
         contentType: body.contentType,

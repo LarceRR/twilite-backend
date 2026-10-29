@@ -53,19 +53,19 @@ describe('реестр лимитов (#38)', () => {
 
   it('позволяет переопределить лимит переменной окружения без релиза клиента', () => {
     const limits = loadLimits({
-      LIMIT_MOMENT_TEXT_MAX_LENGTH: '512',
-      LIMIT_AI_REQUESTS_PER_USER_PER_DAY: '5',
+      LIMIT_MEDIA_IMAGE_MAX_BYTES: '5242880',
+      LIMIT_TPG_IMAGE_MAX_BYTES: '5242880',
     });
 
-    expect(limits.moments.textMaxLength).toBe(512);
-    expect(limits.ai.requestsPerUserPerDay).toBe(5);
+    expect(limits.media.imageMaxBytes).toBe(5242880);
+    expect(limits.tpg.imageMaxBytes).toBe(5242880);
   });
 
   it.each([['0'], ['999999999'], ['abc'], [''], ['12.5']])(
     'падает на некорректном значении %s',
     (value) => {
-      expect(() => loadLimits({ LIMIT_MOMENT_TEXT_MAX_LENGTH: value })).toThrow(
-        /LIMIT_MOMENT_TEXT_MAX_LENGTH/,
+      expect(() => loadLimits({ LIMIT_TPG_IMAGE_MAX_BYTES: value })).toThrow(
+        /LIMIT_TPG_IMAGE_MAX_BYTES/,
       );
     },
   );
@@ -74,12 +74,12 @@ describe('реестр лимитов (#38)', () => {
     let message = '';
 
     try {
-      loadLimits({ LIMIT_MOMENT_TEXT_MAX_LENGTH: 'abc', JWT_ACCESS_SECRET: 'super-secret-value' });
+      loadLimits({ LIMIT_TPG_IMAGE_MAX_BYTES: 'abc', JWT_ACCESS_SECRET: 'super-secret-value' });
     } catch (error) {
       message = error instanceof Error ? error.message : String(error);
     }
 
-    expect(message).toContain('LIMIT_MOMENT_TEXT_MAX_LENGTH');
+    expect(message).toContain('LIMIT_TPG_IMAGE_MAX_BYTES');
     expect(message).not.toContain('super-secret-value');
   });
 
